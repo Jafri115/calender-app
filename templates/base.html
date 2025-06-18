@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Django Calendar{% endblock %}</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .event-card {
+            border-left: 4px solid #007bff;
+            transition: transform 0.2s;
+        }
+        .event-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        .calendar-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        .sync-btn {
+            animation: rotate 2s linear infinite;
+        }
+        .sync-btn.spinning {
+            animation: rotate 1s linear infinite;
+        }
+        @keyframes rotate {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="bg-light">
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container">
+            <a class="navbar-brand" href="{% url 'calendar:calendar_view' %}">
+                <i class="fas fa-calendar-alt me-2"></i>Django Calendar
+            </a>
+            <div class="navbar-nav ms-auto">
+                {% if user.is_authenticated %}
+                    <span class="navbar-text me-3">Welcome, {{ user.username }}!</span>
+                    <a class="nav-link" href="{% url 'admin:logout' %}">Logout</a>
+                {% else %}
+                    <a class="nav-link" href="{% url 'admin:login' %}">Login</a>
+                {% endif %}
+            </div>
+        </div>
+    </nav>
+
+    <main class="container mt-4">
+        {% if messages %}
+            {% for message in messages %}
+                <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+        
+        {% block content %}{% endblock %}
+    </main>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>

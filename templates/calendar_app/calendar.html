@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Daily Shia Spiritual Routine - Task Calendar</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --islamic-green: #2d5a3d;
+            --islamic-gold: #c9a961;
+            --task-fajr: #4a90e2;      /* Blue for dawn */
+            --task-morning: #f5a623;   /* Orange for morning sun */
+            --task-dhuhr: #7ed321;     /* Bright green for midday */
+            --task-asr: #50e3c2;       /* Teal for afternoon */
+            --task-maghrib: #bd10e0;   /* Purple for sunset */
+            --task-isha: #9013fe;      /* Deep purple for night */
+            --task-night: #1e3a8a;     /* Dark blue for deep night */
+            --event-color: #6c757d;
+        }
+
+        body {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: #333;
+        }
+
+        .main-container {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            margin: 20px auto;
+            padding: 30px;
+            max-width: 1600px;
+        }
+
+        .header {
+            background: linear-gradient(135deg, var(--islamic-green), var(--islamic-gold));
+            border-radius: 15px; padding: 30px; margin-bottom: 30px; color: white;
+            text-align: center; box-shadow: 0 10px 20px rgba(45, 90, 61, 0.2);
+        }
+        .header h1 { font-size: 2.5rem; font-weight: 700; text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3); }
+
+        .calendar-container { background: white; border-radius: 15px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1); overflow: hidden; }
+        .calendar-header { background: linear-gradient(135deg, var(--islamic-green), #4a6741); color: white; padding: 15px 25px; display: flex; justify-content: space-between; align-items: center; }
+        .calendar-header h3 { margin-bottom: 0; }
+        .week-view { display: grid; grid-template-columns: 100px repeat(7, 1fr); background: white; }
+        .time-column, .day-column { display: grid; grid-template-rows: 60px repeat(24, 60px); }
+        .time-column { background: #f8f9fa; border-right: 2px solid #e9ecef; }
+        .time-header, .day-header { padding: 10px; text-align: center; font-weight: 700; border-bottom: 2px solid #dee2e6; display: flex; align-items: center; justify-content: center; flex-direction: column; }
+        .day-header { background: #f8f9fa; color: var(--islamic-green); }
+        .day-header.today { background: linear-gradient(135deg, var(--islamic-gold), #d4af37); color: white; box-shadow: inset 0 -4px 8px rgba(0,0,0,0.1); }
+        .day-date { font-size: 1.2rem; }
+        .day-name { font-size: 0.9rem; opacity: 0.9; }
+        .time-slot, .hour-slot { padding: 5px; border-bottom: 1px dashed #e9ecef; border-right: 1px solid #e9ecef; position: relative; transition: background-color 0.2s; }
+        .time-slot { font-size: 0.8rem; font-weight: 600; color: #495057; border-right: 2px solid #e9ecef; }
+        .hour-slot:hover { background-color: #eef7ff; cursor: pointer; }
+
+        .task-item, .event-item {
+            color: white; padding: 5px 8px; border-radius: 5px; font-size: 0.8rem;
+            cursor: pointer; transition: all 0.3s ease; box-shadow: 0 1px 5px rgba(0, 0, 0, 0.15);
+            overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+        }
+        .task-item:hover, .event-item:hover { transform: scale(1.05); z-index: 10; position: relative; }
+
+        .task-item { background-color: var(--task-dhuhr); } /* Default color */
+        .event-item { background-color: var(--event-color); }
+        .priority-High { background-color: #dc3545; }
+        .priority-Medium { background-color: #ffc107; color: #333 !important; }
+        .priority-Low { background-color: #198754; }
+
+        .modal-content { border-radius: 15px; border: none; box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3); }
+        .modal-header { background: linear-gradient(135deg, var(--islamic-green), var(--islamic-gold)); color: white; border-radius: 15px 15px 0 0; }
+    </style>
+</head>
+<body>
+    <div class="main-container">
+        <div class="header">
+            <h1><i class="fas fa-moon me-3"></i>Daily Shia Spiritual Routine</h1>
+            <p class="mb-0">Building Barakah, Taqwa, and Inner Peace with Rizq Focus</p>
+        </div>
+
+        <div class="calendar-container">
+            <div class="calendar-header">
+                <h3><i class="fas fa-calendar-week me-2"></i>Weekly Schedule</h3>
+                <div class="btn-group">
+                    <a href="#" id="prev-week" class="btn btn-light btn-sm">« Prev</a>
+                    <a href="#" id="current-week" class="btn btn-warning btn-sm">Current Week</a>
+                    <a href="#" id="next-week" class="btn btn-light btn-sm">Next »</a>
+                </div>
+            </div>
+            <div class="week-view" id="calendarGrid">
+                <!-- Grid will be generated by JavaScript -->
+                <div class="d-flex justify-content-center align-items-center p-5" style="grid-column: 1 / span 8;">
+                    <div class="spinner-border text-success" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Task Detail Modal -->
+    <div class="modal fade" id="taskModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title fs-4" id="modalTaskTitle">Task Details</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p id="modalTaskDescription"></p>
+                </div>
+                <div class="modal-footer">
+                    <a href="#" id="edit-task-btn" class="btn btn-primary">Edit Task</a>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const calendarGrid = document.getElementById('calendarGrid');
+    const taskModal = new bootstrap.Modal(document.getElementById('taskModal'));
+    let currentWeekStartDate = null;
+
+    async function fetchAndRenderCalendar(startDateParam = '') {
+        calendarGrid.innerHTML = `<div class="d-flex justify-content-center align-items-center p-5" style="grid-column: 1 / span 8;"><div class="spinner-border text-success" role="status"><span class="visually-hidden">Loading...</span></div></div>`;
+        
+        try {
+            const response = await fetch(`/calendar/api/week-data/?${startDateParam}`);
+            if (!response.ok) throw new Error('Network response was not ok.');
+            
+            const data = await response.json();
+            console.log("Fetched week data:", data.start_date);
+            currentWeekStartDate = new Date(data.start_date + 'T00:00:00');
+            renderGrid(data.start_date, data.items);
+        } catch (error) {
+            calendarGrid.innerHTML = `<div class="alert alert-danger" style="grid-column: 1 / span 8;">Error loading calendar data: ${error.message}</div>`;
+        }
+    }
+
+    function renderGrid(startDateStr, items) {
+        calendarGrid.innerHTML = '';
+        const startDate = new Date(startDateStr + 'T00:00:00');
+        const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+        // Time Column
+        const timeColumn = document.createElement('div');
+        timeColumn.className = 'time-column';
+        timeColumn.innerHTML += `<div class="time-header"><i class="fas fa-clock"></i></div>`;
+        for (let i = 0; i < 24; i++) {
+            timeColumn.innerHTML += `<div class="time-slot">${new Date(0,0,0,i).toLocaleTimeString('en-US', {hour: 'numeric', hour12: true})}</div>`;
+        }
+        calendarGrid.appendChild(timeColumn);
+
+        // Day Columns
+        for (let i = 0; i < 7; i++) {
+            const dayDate = new Date(startDate);
+            dayDate.setDate(startDate.getDate() + i);
+            const dayColumn = document.createElement('div');
+            dayColumn.className = 'day-column';
+            dayColumn.dataset.date = dayDate.toISOString().split('T')[0];
+
+            const dayHeader = document.createElement('div');
+            dayHeader.className = 'day-header';
+            if (dayDate.toDateString() === new Date().toDateString()) {
+                dayHeader.classList.add('today');
+            }
+            dayHeader.innerHTML = `<div class="day-date">${dayDate.getDate()}</div><div class="day-name">${dayNames[dayDate.getDay()]}</div>`;
+            dayColumn.appendChild(dayHeader);
+
+            for (let h = 0; h < 24; h++) {
+                const hourSlot = document.createElement('div');
+                hourSlot.className = 'hour-slot';
+                hourSlot.dataset.hour = h;
+                hourSlot.addEventListener('click', () => {
+                    const dateStr = dayColumn.dataset.date;
+                    const timeStr = String(h).padStart(2,'0') + ':00';
+                    window.location.href = `{% url 'calendar:create_task' %}?datetime=${dateStr}T${timeStr}`;
+                });
+                dayColumn.appendChild(hourSlot);
+            }
+            calendarGrid.appendChild(dayColumn);
+        }
+
+        // Place items on the grid
+        items.forEach(item => {
+            const itemDate = new Date(item.start_time);
+            const dateStr = itemDate.toISOString().split('T')[0];
+            const hour = itemDate.getHours();
+
+            const targetSlot = document.querySelector(`.day-column[data-date="${dateStr}"] .hour-slot[data-hour="${hour}"]`);
+            if (targetSlot) {
+                const itemEl = document.createElement('div');
+                itemEl.className = item.type === 'task' ? 'task-item' : 'event-item';
+                itemEl.classList.add(`priority-${item.priority}`);
+                itemEl.textContent = item.title;
+                itemEl.dataset.id = item.id;
+                itemEl.dataset.type = item.type;
+                itemEl.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    showItemDetails(item.id, item.type, item.title, item.description);
+                });
+                targetSlot.appendChild(itemEl);
+            }
+        });
+    }
+    
+    function showItemDetails(id, type, title, description) {
+        document.getElementById('modalTaskTitle').textContent = title;
+        document.getElementById('modalTaskDescription').innerHTML = description || "No description provided.";
+        const editBtn = document.getElementById('edit-task-btn');
+        if(type === 'task') {
+            editBtn.style.display = 'inline-block';
+            editBtn.href = `/calendar/task/${id}/edit/`;
+        } else {
+            editBtn.style.display = 'none';
+        }
+        taskModal.show();
+    }
+
+    // Navigation helpers
+    function getStartDateParam(date) {
+        return `start_date=${date.toISOString().split('T')[0]}`;
+    }
+
+    document.getElementById('prev-week').addEventListener('click', (e) => {
+        e.preventDefault();
+        const newDate = new Date(currentWeekStartDate);
+        newDate.setDate(newDate.getDate() - 7);
+        currentWeekStartDate = newDate;
+        console.log("Prev week to:", currentWeekStartDate.toISOString());
+        fetchAndRenderCalendar(getStartDateParam(currentWeekStartDate));
+    });
+
+    document.getElementById('next-week').addEventListener('click', (e) => {
+        e.preventDefault();
+        const newDate = new Date(currentWeekStartDate);
+        newDate.setDate(newDate.getDate() + 7);
+        currentWeekStartDate = newDate;
+        console.log("Next week to:", currentWeekStartDate.toISOString());
+        fetchAndRenderCalendar(getStartDateParam(currentWeekStartDate));
+    });
+
+    document.getElementById('current-week').addEventListener('click', (e) => {
+        e.preventDefault();
+        const today = new Date();
+        const monday = new Date(today.setDate(today.getDate() - (today.getDay() + 6) % 7));
+        currentWeekStartDate = monday;
+        console.log("Current week to:", monday.toISOString());
+        fetchAndRenderCalendar(getStartDateParam(currentWeekStartDate));
+    });
+
+    // Initial Load
+    const urlParams = new URLSearchParams(window.location.search);
+    const startDateParam = urlParams.get('start_date');
+    if (startDateParam) {
+        currentWeekStartDate = new Date(startDateParam + 'T00:00:00');
+        fetchAndRenderCalendar(`start_date=${startDateParam}`);
+    } else {
+        const today = new Date();
+        const monday = new Date(today.setDate(today.getDate() - (today.getDay() + 6) % 7));
+        currentWeekStartDate = monday;
+        fetchAndRenderCalendar(getStartDateParam(monday));
+    }
+});
+</script>
+
+</body>
+</html>

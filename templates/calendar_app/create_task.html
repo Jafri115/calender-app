@@ -1,0 +1,195 @@
+{% extends 'base.html' %}
+
+{% block title %}Create Task - Django Calendar{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="mb-0">
+                    <i class="fas fa-tasks me-2"></i>Create New Task
+                </h3>
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label for="title" class="form-label">Task Title *</label>
+                        <input type="text" class="form-control" id="title" name="title" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="description" class="form-label">Description</label>
+                        <textarea class="form-control" id="description" name="description" rows="4" placeholder="Enter task description, routine details, or spiritual goals"></textarea>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                        <div id="once-fields">
+                            <label for="due_date" class="form-label">Due Date & Time *</label>
+                            <!-- MODIFIED LINE -->
+                            <input type="datetime-local" class="form-control" id="due_date" name="due_date" value="{{ initial_data.due_date|date:'Y-m-d\TH:i' }}">
+                        </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <h5><i class="fas fa-star-and-crescent me-2"></i>Spiritual Routine Templates</h5>
+                        <p class="text-muted small">Click to auto-fill with common Shia spiritual routines:</p>
+                        <div class="btn-group-vertical w-100 mb-3" role="group">
+                            <button type="button" class="btn btn-outline-info template-btn" data-template="fajr-routine">
+                                <i class="fas fa-moon me-2"></i>Pre-Fajr Spiritual Routine
+                            </button>
+                            <button type="button" class="btn btn-outline-info template-btn" data-template="daily-dhikr">
+                                <i class="fas fa-pray me-2"></i>Daily Dhikr & Tasbih
+                            </button>
+                            <button type="button" class="btn btn-outline-info template-btn" data-template="quran-recitation">
+                                <i class="fas fa-book-open me-2"></i>Quran Recitation Schedule
+                            </button>
+                            <button type="button" class="btn btn-outline-info template-btn" data-template="dua-kumail">
+                                <i class="fas fa-hands me-2"></i>Thursday Dua Kumail
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="d-flex justify-content-between">
+                        <a href="{% url 'calendar:calendar_view' %}" class="btn btn-secondary">
+                            <i class="fas fa-arrow-left me-2"></i>Cancel
+                        </a>
+                        <button type="submit" class="btn btn-success">
+                            <i class="fas fa-save me-2"></i>Create Task
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Set minimum date to today
+const now = new Date();
+const year = now.getFullYear();
+const month = String(now.getMonth() + 1).padStart(2, '0');
+const day = String(now.getDate()).padStart(2, '0');
+const hours = String(now.getHours()).padStart(2, '0');
+const minutes = String(now.getMinutes()).padStart(2, '0');
+
+const minDateTime = `${year}-${month}-${day}T${hours}:${minutes}`;
+document.getElementById('due_date').min = minDateTime;
+
+// Spiritual routine templates
+const templates = {
+    'fajr-routine': {
+        title: 'Pre-Fajr Spiritual Routine',
+        description: `🌙 **Daily Shia Spiritual Routine (with Rizq Focus)**
+**Goal**: Build barakah, taqwa, and inner peace — while seeking halal sustenance.
+
+🌄 **Before Fajr (2:30–3:00 AM)**
+📿 **Salat al-Layl (Tahajjud)** – one of the **strongest acts to increase sustenance**, per hadith.
+• 8 rak'at in 2s + 2 rak'at of Shafa' + 1 rak'ah of Witr.
+• In **Qunoot of Witr**, ask for forgiveness, rizq, and spiritual upliftment.
+
+🕯️ **Dua before Fajr**: Recite **"Astaghfirullah Rabbi wa Atubu Ilayh"** 70 times.
+📖 *Optional:* Recite a few verses from Surah Al-Waqi'ah (verses 1-96) for increased rizq.`,
+        priority: 'high'
+    },
+    'daily-dhikr': {
+        title: 'Daily Dhikr & Tasbih',
+        description: `📿 **Daily Dhikr Routine**
+
+**After each prayer:**
+• Tasbih Fatimah (ع): 34x Allahu Akbar, 33x Alhamdulillah, 33x Subhanallah
+• Recite Ayat al-Kursi
+• 10x Salawat on Prophet & Ahl al-Bayt
+
+**Morning (after Fajr):**
+• 100x "La hawla wa la quwwata illa billah"
+• 100x "Astaghfirullah"
+• Dua al-Faraj for Imam Mahdi (aj)
+
+**Evening (after Maghrib):**
+• Recite Surah al-Mulk
+• 70x "Astaghfirullah Rabbi wa Atubu Ilayh"`
+    },
+    'quran-recitation': {
+        title: 'Daily Quran Recitation',
+        description: `📖 **Quran Recitation Schedule**
+
+**Daily Goal:** Complete Quran in 30 days (1 Juz per day)
+
+**Recommended Times:**
+• **Fajr:** 10-15 minutes - Focus on reflection
+• **After Maghrib:** 15-20 minutes - Melodious recitation
+• **Before sleep:** 5-10 minutes - Peaceful verses
+
+**Special Focus:**
+• **Fridays:** Extra recitation of Surah al-Kahf
+• **Thursdays:** Surah al-Dukhan
+• **Daily:** At least 1 page minimum
+
+**Benefits:** Spiritual purification, increased barakah, divine protection`
+    },
+    'dua-kumail': {
+        title: 'Thursday Night - Dua Kumail',
+        description: `🤲 **Dua Kumail - Thursday Night**
+
+**Timing:** Thursday night after Maghrib or Isha
+**Significance:** Taught by Imam Ali (as) to Kumail ibn Ziyad
+
+**Preparation:**
+• Perform Wudu
+• Find quiet, clean space
+• Face Qibla if possible
+• Recite with contemplation and humility
+
+**Additional Recommended:**
+• Recite Surah al-Fatiha 7x before starting
+• Make personal duas after completion
+• Ask for forgiveness, guidance, and increased rizq
+
+**Benefits:** Forgiveness of sins, protection from difficulties, spiritual elevation`
+    }
+};
+
+document.querySelectorAll('.template-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+        const templateKey = this.dataset.template;
+        const template = templates[templateKey];
+        
+        if (template) {
+            document.getElementById('title').value = template.title;
+            document.getElementById('description').value = template.description;
+            document.getElementById('priority').value = template.priority;
+            
+            // Set due date to tomorrow at appropriate time
+            const tomorrow = new Date();
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            
+            // Set different times based on template
+            if (templateKey === 'fajr-routine') {
+                tomorrow.setHours(2, 30); // 2:30 AM
+            } else if (templateKey === 'dua-kumail') {
+                // Set to next Thursday
+                const daysUntilThursday = (4 - tomorrow.getDay() + 7) % 7 || 7;
+                tomorrow.setDate(tomorrow.getDate() + daysUntilThursday);
+                tomorrow.setHours(20, 0); // 8:00 PM
+            } else {
+                tomorrow.setHours(9, 0); // 9:00 AM for other routines
+            }
+            
+            const dueDateStr = tomorrow.getFullYear() + '-' + 
+                String(tomorrow.getMonth() + 1).padStart(2, '0') + '-' + 
+                String(tomorrow.getDate()).padStart(2, '0') + 'T' + 
+                String(tomorrow.getHours()).padStart(2, '0') + ':' + 
+                String(tomorrow.getMinutes()).padStart(2, '0');
+            
+            document.getElementById('due_date').value = dueDateStr;
+        }
+    });
+});
+</script>
+{% endblock %}
