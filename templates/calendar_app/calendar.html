@@ -102,23 +102,50 @@
     </div>
 
     <!-- Task Detail Modal -->
-    <div class="modal fade" id="taskModal" tabindex="-1">
-        <div class="modal-dialog modal-lg">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title fs-4" id="modalTaskTitle">Task Details</h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+<div class="modal fade" id="taskModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title fs-4">
+                    <i id="modalTaskIcon" class="me-2"></i>
+                    <span id="modalTaskTitle">Details</span>
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <strong><i class="fas fa-clock me-2 text-primary"></i>Time:</strong>
+                        <span id="modalTaskTime">--</span>
+                    </div>
+                    <div class="col-md-6">
+                        <strong><i class="fas fa-tag me-2 text-success"></i>Category:</strong>
+                        <span id="modalTaskCategory">--</span>
+                    </div>
                 </div>
-                <div class="modal-body">
-                    <p id="modalTaskDescription"></p>
+                <div class="description-section">
+                    <h6><i class="fas fa-scroll me-2 text-info"></i>Description & Instructions:</h6>
+                    <div id="modalTaskDescription" class="p-3 bg-light rounded" style="min-height: 100px; white-space: pre-wrap;">Task description will appear here...</div>
                 </div>
-                <div class="modal-footer">
-                    <a href="#" id="edit-task-btn" class="btn btn-primary">Edit Task</a>
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <div class="row mt-4">
+                    <div class="col-md-6">
+                        <strong><i class="fas fa-gift me-2 text-danger"></i>Spiritual Benefits:</strong>
+                        <ul id="modalTaskBenefits" class="mt-2 list-unstyled"></ul>
+                    </div>
+                    <div class="col-md-6">
+                        <strong><i class="fas fa-book me-2 text-secondary"></i>References:</strong>
+                        <div id="modalTaskReferences" class="mt-2 small text-muted"></div>
+                    </div>
                 </div>
+            </div>
+            <div class="modal-footer justify-content-between">
+                <a href="#" id="edit-task-btn" class="btn btn-primary"><i class="fas fa-edit me-2"></i>Edit Task</a>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
             </div>
         </div>
     </div>
+</div>
+
 <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
@@ -202,21 +229,54 @@ document.addEventListener('DOMContentLoaded', function() {
                 itemEl.dataset.type = item.type;
                 itemEl.addEventListener('click', (e) => {
                     e.stopPropagation();
-                    showItemDetails(item.id, item.type, item.title, item.description);
+                    showItemDetails(item); // Pass the whole item object
                 });
                 targetSlot.appendChild(itemEl);
             }
         });
     }
     
-    function showItemDetails(id, type, title, description) {
-        document.getElementById('modalTaskTitle').textContent = title;
-        document.getElementById('modalTaskDescription').innerHTML = description || "No description provided.";
+    function showItemDetails(item) {
+        // Icon and Title
+        const iconEl = document.getElementById('modalTaskIcon');
+        iconEl.className = item.type === 'task' ? 'fas fa-tasks me-2' : 'fas fa-calendar-check me-2';
+        document.getElementById('modalTaskTitle').textContent = item.title;
+
+        // Time
+        const startTime = new Date(item.start_time);
+        let timeString = startTime.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+        if (item.type === 'event' && item.end_time) {
+            const endTime = new Date(item.end_time);
+            timeString += ` - ${endTime.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}`;
+        }
+        document.getElementById('modalTaskTime').textContent = timeString;
+
+        // Category
+        const category = (item.category || 'General').charAt(0).toUpperCase() + (item.category || 'General').slice(1);
+        document.getElementById('modalTaskCategory').textContent = category;
+
+        // Description (handle basic markdown from templates)
+        const descriptionHtml = (item.description || "No description provided.")
+            .replace(/\n/g, '<br>')
+            .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+        document.getElementById('modalTaskDescription').innerHTML = descriptionHtml;
+
+        // Benefits & References (using placeholders)
+        let benefitsHtml = '<li><i class="fas fa-info-circle me-2"></i>See description for details.</li>';
+        const benefitsMatch = (item.description || '').match(/\*\*Benefits:\*\*\s*(.*)/i);
+        if (benefitsMatch && benefitsMatch[1]) {
+            benefitsHtml = benefitsMatch[1].split(',').map(b => `<li><i class="fas fa-check-circle text-success me-2"></i>${b.trim()}</li>`).join('');
+        }
+        document.getElementById('modalTaskBenefits').innerHTML = benefitsHtml;
+        document.getElementById('modalTaskReferences').textContent = 'References are included in the description text if available.';
+
+        // Edit button logic
         const editBtn = document.getElementById('edit-task-btn');
-        if(type === 'task') {
+        if(item.type === 'task') {
             editBtn.style.display = 'inline-block';
-            editBtn.href = `/calendar/task/${id}/edit/`;
+            editBtn.href = `/calendar/task/${item.id}/edit/`;
         } else {
+            // Events are assumed to be managed via an external source (like Google) and not editable here
             editBtn.style.display = 'none';
         }
         taskModal.show();

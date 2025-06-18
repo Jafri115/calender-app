@@ -29,12 +29,12 @@
                                 {% for value, name in frequencies %}<option value="{{ value }}" {% if task.frequency == value %}selected{% endif %}>{{ name }}</option>{% endfor %}
                             </select>
                         </div>
-                        <div class="col-md-6 mb-3">
+                        <!-- <div class="col-md-6 mb-3">
                             <label for="priority" class="form-label">Priority</label>
                             <select class="form-select" id="priority" name="priority">
                                 {% for value, name in priorities %}<option value="{{ value }}" {% if task.priority == value %}selected{% endif %}>{{ name }}</option>{% endfor %}
                             </select>
-                        </div>
+                        </div> -->
                     </div>
                     
                     <div id="once-fields">

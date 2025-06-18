@@ -1,4 +1,3 @@
-
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
@@ -65,6 +64,7 @@ def week_data(request):
         event_list.append({
             'id': event.id,
             'title': event.title,
+            'description': event.description,
             'type': 'event',
             'start_time': event.start_time.isoformat(),
             'end_time': event.end_time.isoformat(),
@@ -357,4 +357,3 @@ def create_event(request):
             return redirect('calendar:create_event')
             
     return render(request, 'calendar_app/create_event.html')
-
