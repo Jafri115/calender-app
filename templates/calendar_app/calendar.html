@@ -6,328 +6,420 @@
     <title>Daily Shia Spiritual Routine - Task Calendar</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <meta name="csrf-token" content="{{ csrf_token }}">
     <style>
         :root {
             --islamic-green: #2d5a3d;
             --islamic-gold: #c9a961;
-            --task-fajr: #4a90e2;      /* Blue for dawn */
-            --task-morning: #f5a623;   /* Orange for morning sun */
-            --task-dhuhr: #7ed321;     /* Bright green for midday */
-            --task-asr: #50e3c2;       /* Teal for afternoon */
-            --task-maghrib: #bd10e0;   /* Purple for sunset */
-            --task-isha: #9013fe;      /* Deep purple for night */
-            --task-night: #1e3a8a;     /* Dark blue for deep night */
             --event-color: #6c757d;
+            --hour-slot-height-normal: 48px; 
+            --day-header-height: 60px;
+            --time-column-width: 70px;
         }
-
-        body {
-            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            color: #333;
-        }
-
-        .main-container {
-            background: rgba(255, 255, 255, 0.95);
-            border-radius: 20px;
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
-            margin: 20px auto;
-            padding: 30px;
-            max-width: 1600px;
-        }
-
-        .header {
-            background: linear-gradient(135deg, var(--islamic-green), var(--islamic-gold));
-            border-radius: 15px; padding: 30px; margin-bottom: 30px; color: white;
-            text-align: center; box-shadow: 0 10px 20px rgba(45, 90, 61, 0.2);
-        }
-        .header h1 { font-size: 2.5rem; font-weight: 700; text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3); }
-
-        .calendar-container { background: white; border-radius: 15px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1); overflow: hidden; }
-        .calendar-header { background: linear-gradient(135deg, var(--islamic-green), #4a6741); color: white; padding: 15px 25px; display: flex; justify-content: space-between; align-items: center; }
-        .calendar-header h3 { margin-bottom: 0; }
-        .week-view { display: grid; grid-template-columns: 100px repeat(7, 1fr); background: white; }
-        .time-column, .day-column { display: grid; grid-template-rows: 60px repeat(24, 60px); }
-        .time-column { background: #f8f9fa; border-right: 2px solid #e9ecef; }
-        .time-header, .day-header { padding: 10px; text-align: center; font-weight: 700; border-bottom: 2px solid #dee2e6; display: flex; align-items: center; justify-content: center; flex-direction: column; }
-        .day-header { background: #f8f9fa; color: var(--islamic-green); }
-        .day-header.today { background: linear-gradient(135deg, var(--islamic-gold), #d4af37); color: white; box-shadow: inset 0 -4px 8px rgba(0,0,0,0.1); }
-        .day-date { font-size: 1.2rem; }
-        .day-name { font-size: 0.9rem; opacity: 0.9; }
-        .time-slot, .hour-slot { padding: 5px; border-bottom: 1px dashed #e9ecef; border-right: 1px solid #e9ecef; position: relative; transition: background-color 0.2s; }
-        .time-slot { font-size: 0.8rem; font-weight: 600; color: #495057; border-right: 2px solid #e9ecef; }
-        .hour-slot:hover { background-color: #eef7ff; cursor: pointer; }
-
-        .task-item, .event-item {
-            color: white; padding: 5px 8px; border-radius: 5px; font-size: 0.8rem;
-            cursor: pointer; transition: all 0.3s ease; box-shadow: 0 1px 5px rgba(0, 0, 0, 0.15);
-            overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-        }
-        .task-item:hover, .event-item:hover { transform: scale(1.05); z-index: 10; position: relative; }
-
-        .task-item { background-color: var(--task-dhuhr); } /* Default color */
-        .event-item { background-color: var(--event-color); }
-        .priority-High { background-color: #dc3545; }
-        .priority-Medium { background-color: #ffc107; color: #333 !important; }
-        .priority-Low { background-color: #198754; }
-
-        .modal-content { border-radius: 15px; border: none; box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3); }
-        .modal-header { background: linear-gradient(135deg, var(--islamic-green), var(--islamic-gold)); color: white; border-radius: 15px 15px 0 0; }
+        body { background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%); font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #333; overscroll-behavior-y: contain; }
+        .main-container { background: rgba(255,255,255,0.97); border-radius:18px; box-shadow:0 15px 35px rgba(0,0,0,0.12); margin:15px auto; padding:15px 20px; max-width:1600px; }
+        .header { background: linear-gradient(135deg, var(--islamic-green), var(--islamic-gold)); border-radius:12px; padding:18px; margin-bottom:18px; color:white; text-align:center; box-shadow:0 8px 18px rgba(45,90,61,0.22); }
+        .header h1 { font-size:2rem; font-weight:600; text-shadow:1px 1px 2px rgba(0,0,0,0.2); }
+        .header-nav { margin-top:12px; }
+        .header-nav .btn { margin:0 4px; background-color:rgba(255,255,255,0.9); color:var(--islamic-green); border-color:rgba(255,255,255,0.55); font-size:0.75rem; padding:0.3rem 0.6rem; }
+        .header-nav .btn:hover { background-color:white; color:var(--islamic-green); transform:translateY(-1px); box-shadow:0 2px 4px rgba(0,0,0,0.1); }
+        .header-nav .btn-warning { background-color:var(--islamic-gold); color:white; border-color:var(--islamic-gold); }
+        .header-nav .btn-warning:hover { background-color:#b38e4a; }
+        .summary-section { background:rgba(255,255,255,0.8); border-radius:10px; padding:10px 15px; margin-bottom:18px; box-shadow:0 3px 8px rgba(0,0,0,0.05); }
+        .summary-section h5 { color:var(--islamic-green); font-size:0.9rem; margin-bottom:0.2rem; }
+        .summary-section p { font-size:0.8rem; margin-bottom:0; }
+        #requestNotificationPermission { font-size:0.7rem; padding:0.1rem 0.3rem; }
+        .calendar-container { background:white; border-radius:12px; box-shadow:0 6px 20px rgba(0,0,0,0.07); overflow-x:auto; }
+        .calendar-header { background:linear-gradient(135deg, var(--islamic-green), #4a6741); color:white; padding:10px 18px; display:flex; justify-content:space-between; align-items:center; }
+        .calendar-header h3 { margin-bottom:0; font-size:1.2rem; }
+        .calendar-header .btn-group .btn { font-size:0.75rem; padding:0.3rem 0.7rem; }
+        .week-view { display:grid; grid-template-columns:var(--time-column-width) repeat(7, 1fr); background:white; min-width:750px; }
+        .time-column, .day-column { display:grid; grid-template-rows:var(--day-header-height) repeat(24, var(--hour-slot-height-normal)); }
+        .time-column { background:#f9fcff; border-right:1px solid #dee2e6; }
+        .day-column { position:relative; border-left:1px solid #dee2e6; }
+        .day-column:first-of-type { border-left:none; }
+        .time-header, .day-header { padding:8px; text-align:center; font-weight:700; border-bottom:1px solid #dee2e6; display:flex; align-items:center; justify-content:center; flex-direction:column; height:var(--day-header-height); box-sizing:border-box; }
+        .day-header { background:#f9fcff; color:var(--islamic-green); }
+        .day-header.today { background:linear-gradient(135deg, var(--islamic-gold), #e0aa3e); color:white; box-shadow:inset 0 -2px 5px rgba(0,0,0,0.1); }
+        .day-date { font-size:1rem; }
+        .day-name { font-size:0.75rem; opacity:0.85; }
+        .time-slot { font-size:0.7rem; font-weight:500; color:#555; display:flex; align-items:center; justify-content:center; }
+        .hour-slot { border-bottom:1px dashed #eef2f5; }
+        .time-slot, .hour-slot { box-sizing:border-box; position:relative; }
+        .day-column .hour-slot { border-right:1px solid #eef2f5; }
+        .day-column:last-of-type .hour-slot { border-right:none; }
+        .day-column .hour-slot:last-of-type { border-bottom:none; }
+        .task-item, .event-item { position:absolute; left:3px; right:3px; padding:3px 5px; border-radius:4px; font-size:0.68rem; cursor:pointer; transition:all 0.2s ease, box-shadow 0.2s; box-shadow:0 1px 2px rgba(0,0,0,0.12); overflow:hidden; display:flex; flex-direction:column; justify-content:flex-start; line-height:1.2; z-index:1; border:1px solid transparent; }
+        .task-item:hover, .event-item:hover { box-shadow:0 2px 6px rgba(0,0,0,0.2); z-index:2; border-color:rgba(0,0,0,0.1); }
+        .item-content-wrapper { display:flex; align-items:flex-start; margin-bottom:1px; }
+        .item-icon { margin-right:3px; margin-top:0; font-size:0.9em; flex-shrink:0; }
+        .item-title { text-overflow:ellipsis; overflow:hidden; font-weight:500; display:-webkit-box; -webkit-line-clamp:1; -webkit-box-orient:vertical; }
+        .item-title.multiline { -webkit-line-clamp:2; }
+        .item-time-display { font-size:0.6rem; opacity:0.85; }
+        .item-description-preview { font-size:0.6rem; opacity:0.75; margin-top:2px; line-height:1.1; max-height:2.2em; overflow:hidden; text-overflow:ellipsis; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; }
+        .task-item.completed { opacity:0.6; background-image:repeating-linear-gradient(-45deg,transparent,transparent 3px,rgba(0,0,0,0.05)3px,rgba(0,0,0,0.05)6px); }
+        .task-item.completed .item-title { text-decoration:line-through; }
+        .current-time-line-wrapper { position:absolute; left:var(--time-column-width); right:0; height:2px; z-index:3; pointer-events:none; }
+        .current-time-line { height:100%; background-color:#e74c3c; position:relative; }
+        .current-time-line-indicator { position:absolute; width:7px; height:7px; border-radius:50%; background-color:#e74c3c; left:-3.5px; top:-2.5px; }
+        
+        .modal-dialog { max-width: 750px; margin-top: 2rem; margin-bottom: 2rem;}
+        .modal-content { border-radius:12px; box-shadow:0 10px 30px rgba(0,0,0,0.25); height: 85vh; max-height: 700px; display: flex; flex-direction: column;}
+        .modal-header { background:linear-gradient(135deg, var(--islamic-green), var(--islamic-gold)); color:white; border-radius:12px 12px 0 0; padding:0.75rem 1rem; flex-shrink: 0;}
+        .modal-title { font-size:1.1rem; }
+        .modal-body { padding:1rem 1.25rem; overflow-y: auto; flex-grow: 1;}
+        .modal-footer { padding: 0.75rem 1rem; flex-shrink: 0;}
+        .modal-info-row { display: flex; gap: 1.5rem; margin-bottom: 0.75rem; align-items: center; flex-wrap: wrap;}
+        .modal-info-item { display: flex; align-items: center; gap: 0.4rem;}
+        .modal-info-item strong { font-size: 0.8rem; color: var(--islamic-green);}
+        .modal-info-item span { font-size: 0.8rem;}
+        .description-section { margin-bottom: 1rem;}
+        .description-section h6 { font-size:0.85rem; color:var(--islamic-green); margin-bottom:0.5rem; display: flex; align-items: center; gap: 0.5rem;}
+        #modalItemDescription { background: #f8f9fa; border: 1px solid #e9ecef; border-radius: 8px; padding: 0.75rem; font-size: 0.85rem; line-height: 1.45; max-height: 300px; /* Adjusted for overall modal height */ overflow-y: auto;}
+        #modalItemDescription h1, #modalItemDescription h2, #modalItemDescription h3, #modalItemDescription h4, #modalItemDescription h5, #modalItemDescription h6 {color: var(--islamic-green); margin-top: 0.8rem; margin-bottom: 0.4rem; font-weight: 600;}
+        #modalItemDescription h1 { font-size: 1.25rem; } #modalItemDescription h2 { font-size: 1.1rem; } #modalItemDescription h3 { font-size: 1rem; }
+        #modalItemDescription h4 { font-size: 0.9rem; } #modalItemDescription h5 { font-size: 0.85rem; } #modalItemDescription h6 { font-size: 0.8rem; }
+        #modalItemDescription strong {color: #2c3e50; font-weight: 600;} #modalItemDescription em {color: #5a6c7d; font-style: italic;}
+        #modalItemDescription del {color: #999;text-decoration: line-through;}
+        #modalItemDescription ul, #modalItemDescription ol { margin: 0.5rem 0; padding-left: 1.2rem;} #modalItemDescription li { margin-bottom: 0.2rem;}
+        #modalItemDescription a {color: var(--islamic-green); text-decoration: none; border-bottom: 1px solid transparent; transition: border-color 0.2s;}
+        #modalItemDescription a:hover { border-bottom-color: var(--islamic-green); }
+        #modalItemDescription code { background: #e9ecef; padding: 0.15rem 0.3rem; border-radius: 3px; font-family: 'Courier New', monospace; font-size: 0.8em; color: #e83e8c;}
+        #modalItemDescription pre { background: #f1f3f4; padding: 0.75rem; border-radius: 6px; overflow-x: auto; margin: 0.8rem 0; border-left: 3px solid var(--islamic-green);}
+        #modalItemDescription pre code {background: none; padding: 0; color: #333;}
+        #modalItemDescription blockquote { margin: 0.8rem 0; padding: 0.6rem 1rem; background: #f8f9fa; border-left: 3px solid var(--islamic-gold); font-style: italic; color: #555;}
+        #modalTaskSpecifics { background: #f8f9fa; border-radius: 6px; padding: 0.75rem; margin-top: 0.75rem; }
+        #modalTaskSpecifics .row { margin: 0; align-items: center; }
+        #modalTaskSpecifics .col-md-6 { padding: 0.25rem 0.5rem; display: flex; align-items: center; gap: 0.5rem; }
+        .btn-close-white { filter:invert(1) grayscale(100%) brightness(200%); }
+        .view-full-description-btn { font-size: 0.7rem; padding: 0.15rem 0.4rem; }
     </style>
 </head>
 <body>
     <div class="main-container">
         <div class="header">
             <h1><i class="fas fa-moon me-3"></i>Daily Shia Spiritual Routine</h1>
-            <p class="mb-0">Building Barakah, Taqwa, and Inner Peace with Rizq Focus</p>
+            <p class="mb-0 small">Building Barakah, Taqwa, and Inner Peace with Rizq Focus</p>
+            <div class="header-nav">
+                <a href="{% url 'calendar:create_task' %}" class="btn btn-sm"><i class="fas fa-plus-circle me-1"></i> Add Task</a>
+                <a href="{% url 'calendar:task_statistics' %}" class="btn btn-sm"><i class="fas fa-chart-bar me-1"></i> View Stats</a>
+                <a href="{% url 'calendar:sync_gcal_events' %}" class="btn btn-sm"><i class="fab fa-google me-1"></i> Sync GCal Events</a>
+                {% if not request.user.googlecalendartoken %}
+                <a href="{% url 'calendar:google_auth' %}" class="btn btn-warning btn-sm"><i class="fab fa-google me-1"></i> Connect GCal</a>
+                {% else %}
+                <span class="badge bg-light text-success ms-2 p-2" style="font-size:0.75rem;"><i class="fab fa-google text-success"></i> GCal Linked</span>
+                {% endif %}
+            </div>
+        </div>
+        <div class="summary-section">
+            <div class="row text-center align-items-center">
+                <div class="col-md-4 col-6 mb-2 mb-md-0"><h5><i class="fas fa-calendar-day me-1 text-info"></i>Today</h5><p>{{ todays_tasks_count }} task(s)</p></div>
+                <div class="col-md-4 col-6 mb-2 mb-md-0"><h5><i class="fas fa-calendar-alt me-1 text-warning"></i>Upcoming</h5><p>{{ upcoming_tasks_count }} task(s) next 7d</p></div>
+                <div class="col-md-4 col-12"><h5><i class="fas fa-bell me-1 text-success"></i>Notifications</h5><p><span id="notificationStatus">Checking...</span> <button id="requestNotificationPermission" class="btn btn-sm btn-outline-success ms-1 py-0 px-1" style="display:none;">Enable</button></p></div>
+            </div>
         </div>
 
         <div class="calendar-container">
             <div class="calendar-header">
                 <h3><i class="fas fa-calendar-week me-2"></i>Weekly Schedule</h3>
                 <div class="btn-group">
-                    <a href="#" id="prev-week" class="btn btn-light btn-sm">« Prev</a>
-                    <a href="#" id="current-week" class="btn btn-warning btn-sm">Current Week</a>
-                    <a href="#" id="next-week" class="btn btn-light btn-sm">Next »</a>
+                    <button id="prev-week" class="btn btn-light btn-sm"><i class="fas fa-chevron-left"></i></button>
+                    <button id="current-week" class="btn btn-light btn-sm">This Week</button>
+                    <button id="next-week" class="btn btn-light btn-sm"><i class="fas fa-chevron-right"></i></button>
                 </div>
             </div>
             <div class="week-view" id="calendarGrid">
-                <!-- Grid will be generated by JavaScript -->
-                <div class="d-flex justify-content-center align-items-center p-5" style="grid-column: 1 / span 8;">
-                    <div class="spinner-border text-success" role="status">
-                        <span class="visually-hidden">Loading...</span>
-                    </div>
+                <div class="d-flex justify-content-center align-items-center p-5" style="grid-column: 1 / span 8; min-height: 400px;">
+                    <div class="spinner-border text-success" role="status"><span class="visually-hidden">Loading...</span></div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Task Detail Modal -->
-<div class="modal fade" id="taskModal" tabindex="-1">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title fs-4">
-                    <i id="modalTaskIcon" class="me-2"></i>
-                    <span id="modalTaskTitle">Details</span>
-                </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <div class="row mb-3">
-                    <div class="col-md-6">
-                        <strong><i class="fas fa-clock me-2 text-primary"></i>Time:</strong>
-                        <span id="modalTaskTime">--</span>
+    <!-- Item Detail Modal -->
+    <div class="modal fade" id="itemModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="modalItemTitleWrapper">
+                        <i id="modalItemIcon" class="me-2"></i>
+                        <span id="modalItemTitle">Details</span>
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="modal-info-row">
+                        <div class="modal-info-item">
+                            <strong><i class="fas fa-clock text-primary"></i> Time:</strong>
+                            <span id="modalItemTime">--</span>
+                        </div>
+                        <div class="modal-info-item">
+                            <strong><i class="fas fa-exclamation-circle text-warning"></i> Priority:</strong>
+                            <span id="modalItemPriorityBadge" class="badge">--</span>
+                        </div>
                     </div>
-                    <div class="col-md-6">
-                        <strong><i class="fas fa-tag me-2 text-success"></i>Category:</strong>
-                        <span id="modalTaskCategory">--</span>
+                    <div class="description-section">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                             <h6><i class="fas fa-info-circle text-info"></i>Description:</h6>
+                            <a href="#" id="viewFullDescriptionBtn" class="btn btn-outline-secondary btn-sm view-full-description-btn" target="_blank" style="display: none;">
+                                <i class="fas fa-external-link-alt me-1"></i> View Full
+                            </a>
+                        </div>
+                        <div id="modalItemDescription">Description will appear here...</div>
+                    </div>
+                    <div id="modalTaskSpecifics" style="display:none;">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <strong><i class="fas fa-palette"></i> Color:</strong>
+                                <span id="modalTaskColorPreview" style="display:inline-block;width:18px;height:18px;border-radius:3px;vertical-align:middle;margin-right:5px;border:1px solid #ccc;"></span>
+                                <span id="modalTaskColor">--</span>
+                            </div>
+                            <div class="col-md-6" id="modalTaskCompletionSection">
+                                <strong><i class="fas fa-check-square text-success"></i> Status:</strong>
+                                <span id="modalTaskStatusText" class="fw-bold">Pending</span>
+                                <button id="modalMarkCompleteBtn" class="btn btn-sm ms-2" data-task-id="" data-occurrence-date="">Mark...</button>
+                            </div>
+                        </div>
                     </div>
                 </div>
-                <div class="description-section">
-                    <h6><i class="fas fa-scroll me-2 text-info"></i>Description & Instructions:</h6>
-                    <div id="modalTaskDescription" class="p-3 bg-light rounded" style="min-height: 100px; white-space: pre-wrap;">Task description will appear here...</div>
+                <div class="modal-footer justify-content-between">
+                    <a href="#" id="edit-item-btn" class="btn btn-primary btn-sm">
+                        <i class="fas fa-edit me-1"></i>Edit
+                    </a>
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Close</button>
                 </div>
-                <div class="row mt-4">
-                    <div class="col-md-6">
-                        <strong><i class="fas fa-gift me-2 text-danger"></i>Spiritual Benefits:</strong>
-                        <ul id="modalTaskBenefits" class="mt-2 list-unstyled"></ul>
-                    </div>
-                    <div class="col-md-6">
-                        <strong><i class="fas fa-book me-2 text-secondary"></i>References:</strong>
-                        <div id="modalTaskReferences" class="mt-2 small text-muted"></div>
-                    </div>
-                </div>
-            </div>
-            <div class="modal-footer justify-content-between">
-                <a href="#" id="edit-task-btn" class="btn btn-primary"><i class="fas fa-edit me-2"></i>Edit Task</a>
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
             </div>
         </div>
     </div>
-</div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const calendarGrid = document.getElementById('calendarGrid');
-    const taskModal = new bootstrap.Modal(document.getElementById('taskModal'));
+    const itemModalElement = document.getElementById('itemModal');
+    const itemModal = new bootstrap.Modal(itemModalElement);
+    const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+    
     let currentWeekStartDate = null;
+    let activeCalendarItems = [];
+    let notificationsEnabled = false;
+
+    const slotHeightNormalPx = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--hour-slot-height-normal'));
+    const dayHeaderHeightPx = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--day-header-height'));
+    const pixelsPerMinute = slotHeightNormalPx / 60;
+
+    const notificationStatusEl = document.getElementById('notificationStatus');
+    const requestNotificationPermissionBtn = document.getElementById('requestNotificationPermission');
+
+    function updateNotificationStatusDisplay() { 
+        if (!('Notification' in window)) { 
+            notificationStatusEl.textContent = "Not Supported"; 
+            if(requestNotificationPermissionBtn) requestNotificationPermissionBtn.style.display = 'none'; 
+            return; 
+        } 
+        if (Notification.permission === "granted") { 
+            notificationStatusEl.textContent = "Enabled"; 
+            notificationsEnabled = true; 
+            if(requestNotificationPermissionBtn) requestNotificationPermissionBtn.style.display = 'none'; 
+        } else if (Notification.permission === "denied") { 
+            notificationStatusEl.textContent = "Denied"; 
+            notificationsEnabled = false; 
+            if(requestNotificationPermissionBtn) requestNotificationPermissionBtn.style.display = 'none'; 
+        } else { 
+            notificationStatusEl.textContent = "Disabled"; 
+            if(requestNotificationPermissionBtn) requestNotificationPermissionBtn.style.display = 'inline-block'; 
+            notificationsEnabled = false; 
+        } 
+    }
+    
+    if(requestNotificationPermissionBtn) {
+        requestNotificationPermissionBtn.addEventListener('click', () => { 
+            Notification.requestPermission().then(permission => { 
+                updateNotificationStatusDisplay(); 
+                if (permission === "granted") new Notification("Notifications Enabled!", { body: "You will now receive reminders." }); 
+            }); 
+        });
+    }
+    updateNotificationStatusDisplay();
+
+    function scheduleNotification(task) { 
+        if (!notificationsEnabled || task.completed || !task.start_time || !('Notification' in window) || Notification.permission !== "granted") return; 
+        const now = new Date(); 
+        const startTime = new Date(task.start_time); 
+        if (startTime > now) { 
+            const notifiedKey = `notified_${task.id}_${task.occurrence_date}`; 
+            if (localStorage.getItem(notifiedKey)) return; 
+            if (startTime.getTime() - now.getTime() <= 5 * 60 * 1000 && startTime.getTime() - now.getTime() > -1 * 60 * 1000 ) { 
+                new Notification(task.title, { body: `Starts at ${String(startTime.getHours()).padStart(2,'0')}:${String(startTime.getMinutes()).padStart(2,'0')}. ${(task.description || '').substring(0,50)}...` }); 
+                localStorage.setItem(notifiedKey, 'true'); 
+            } 
+        } 
+    }
+    setInterval(() => { 
+        if(notificationsEnabled) {
+            activeCalendarItems.filter(item => item.type === 'task').forEach(scheduleNotification); 
+        }
+    }, 30 * 1000);
 
     async function fetchAndRenderCalendar(startDateParam = '') {
-        calendarGrid.innerHTML = `<div class="d-flex justify-content-center align-items-center p-5" style="grid-column: 1 / span 8;"><div class="spinner-border text-success" role="status"><span class="visually-hidden">Loading...</span></div></div>`;
-        
-        try {
-            const response = await fetch(`/calendar/api/week-data/?${startDateParam}`);
-            if (!response.ok) throw new Error('Network response was not ok.');
+        calendarGrid.innerHTML = `<div class="d-flex justify-content-center align-items-center p-5" style="grid-column: 1 / span 8; min-height: 400px;"><div class="spinner-border text-success" role="status"><span class="visually-hidden">Loading...</span></div></div>`;
+        try { 
+            const response = await fetch(`/calendar/api/week-data/?${startDateParam}`); 
+            if (!response.ok) throw new Error(`Network: ${response.statusText} (${response.status})`); 
+            const data = await response.json(); 
+            if (data.error) throw new Error(data.error); 
             
-            const data = await response.json();
-            console.log("Fetched week data:", data.start_date);
-            currentWeekStartDate = new Date(data.start_date + 'T00:00:00');
-            renderGrid(data.start_date, data.items);
-        } catch (error) {
-            calendarGrid.innerHTML = `<div class="alert alert-danger" style="grid-column: 1 / span 8;">Error loading calendar data: ${error.message}</div>`;
+            const [year, month, day] = data.start_date.split('-').map(Number);
+            currentWeekStartDate = new Date(year, month - 1, day);
+            
+            activeCalendarItems = data.items; 
+            renderGrid(currentWeekStartDate, data.items); 
+            activeCalendarItems.filter(item => item.type === 'task').forEach(scheduleNotification);
+        } catch (error) { 
+            calendarGrid.innerHTML = `<div class="alert alert-danger m-3" style="grid-column: 1 / span 8;">Failed to load calendar: ${error.message}</div>`; 
+            console.error("Fetch or Render error in fetchAndRenderCalendar:", error); 
         }
     }
 
-    function renderGrid(startDateStr, items) {
+    function renderGrid(mondayDateObj, items) {
         calendarGrid.innerHTML = '';
-        const startDate = new Date(startDateStr + 'T00:00:00');
-        const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+        const dayNames = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]; 
 
-        // Time Column
-        const timeColumn = document.createElement('div');
-        timeColumn.className = 'time-column';
-        timeColumn.innerHTML += `<div class="time-header"><i class="fas fa-clock"></i></div>`;
-        for (let i = 0; i < 24; i++) {
-            timeColumn.innerHTML += `<div class="time-slot">${new Date(0,0,0,i).toLocaleTimeString('en-US', {hour: 'numeric', hour12: true})}</div>`;
-        }
+        const timeColumn = document.createElement('div'); timeColumn.className = 'time-column';
+        const timeHeader = document.createElement('div'); timeHeader.className = 'time-header'; timeHeader.innerHTML = '<i class="fas fa-clock"></i>';
+        timeColumn.appendChild(timeHeader);
+        for (let h = 0; h < 24; h++) { const tsDiv = document.createElement('div'); tsDiv.className = 'time-slot'; tsDiv.textContent = String(h).padStart(2,'0')+':00'; timeColumn.appendChild(tsDiv); }
         calendarGrid.appendChild(timeColumn);
 
-        // Day Columns
         for (let i = 0; i < 7; i++) {
-            const dayDate = new Date(startDate);
-            dayDate.setDate(startDate.getDate() + i);
-            const dayColumn = document.createElement('div');
-            dayColumn.className = 'day-column';
-            dayColumn.dataset.date = dayDate.toISOString().split('T')[0];
-
-            const dayHeader = document.createElement('div');
-            dayHeader.className = 'day-header';
-            if (dayDate.toDateString() === new Date().toDateString()) {
-                dayHeader.classList.add('today');
-            }
-            dayHeader.innerHTML = `<div class="day-date">${dayDate.getDate()}</div><div class="day-name">${dayNames[dayDate.getDay()]}</div>`;
-            dayColumn.appendChild(dayHeader);
-
+            const dayDate = new Date(mondayDateObj.getFullYear(), mondayDateObj.getMonth(), mondayDateObj.getDate() + i);
+            const dayColumn = document.createElement('div'); dayColumn.className = 'day-column'; dayColumn.dataset.date = dayDate.toISOString().split('T')[0];
+            const dHdr = document.createElement('div'); dHdr.className = 'day-header'; 
+            const today = new Date(); 
+            if (dayDate.getFullYear() === today.getFullYear() && dayDate.getMonth() === today.getMonth() && dayDate.getDate() === today.getDate()) { dHdr.classList.add('today'); }
+            dHdr.innerHTML = `<div class="day-date">${dayDate.getDate()}</div><div class="day-name">${dayNames[i]}</div>`;
+            dayColumn.appendChild(dHdr);
             for (let h = 0; h < 24; h++) {
-                const hourSlot = document.createElement('div');
-                hourSlot.className = 'hour-slot';
-                hourSlot.dataset.hour = h;
-                hourSlot.addEventListener('click', () => {
-                    const dateStr = dayColumn.dataset.date;
-                    const timeStr = String(h).padStart(2,'0') + ':00';
-                    window.location.href = `{% url 'calendar:create_task' %}?datetime=${dateStr}T${timeStr}`;
-                });
-                dayColumn.appendChild(hourSlot);
+                const hrSlt = document.createElement('div'); hrSlt.className = 'hour-slot'; hrSlt.dataset.hour = h;
+                hrSlt.addEventListener('click', (e) => { if(e.target !== hrSlt) return; const dStr = dayColumn.dataset.date; const tStr = String(h).padStart(2,'0')+':00'; window.location.href = `{% url 'calendar:create_task' %}?datetime=${dStr}T${tStr}`; });
+                dayColumn.appendChild(hrSlt);
             }
             calendarGrid.appendChild(dayColumn);
         }
 
-        // Place items on the grid
         items.forEach(item => {
-            const itemDate = new Date(item.start_time);
-            const dateStr = itemDate.toISOString().split('T')[0];
-            const hour = itemDate.getHours();
+            const startTime = new Date(item.start_time);
+            const dateStr = startTime.toISOString().split('T')[0];
+            const parentDayColumn = document.querySelector(`.day-column[data-date="${dateStr}"]`);
+            if (!parentDayColumn) return;
 
-            const targetSlot = document.querySelector(`.day-column[data-date="${dateStr}"] .hour-slot[data-hour="${hour}"]`);
-            if (targetSlot) {
-                const itemEl = document.createElement('div');
-                itemEl.className = item.type === 'task' ? 'task-item' : 'event-item';
-                itemEl.classList.add(`priority-${item.priority}`);
-                itemEl.textContent = item.title;
-                itemEl.dataset.id = item.id;
-                itemEl.dataset.type = item.type;
-                itemEl.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    showItemDetails(item); // Pass the whole item object
-                });
-                targetSlot.appendChild(itemEl);
+            const itemEl = document.createElement('div');
+            itemEl.className = item.type === 'task' ? 'task-item' : 'event-item';
+            itemEl.style.backgroundColor = item.color || 'var(--event-color)';
+            function getContrastYIQ(hex){ if (!hex || typeof hex !== 'string') return 'black'; if(hex.startsWith('var(--')) return '#333'; hex = hex.replace("#", ""); if (hex.length === 3) hex = hex.split('').map(c=>c+c).join(''); if (hex.length !== 6) return 'black'; var r=parseInt(hex.substr(0,2),16),g=parseInt(hex.substr(2,4),16),b=parseInt(hex.substr(4,6),16); if(isNaN(r)||isNaN(g)||isNaN(b))return 'black'; var yiq=((r*299)+(g*587)+(b*114))/1000; return(yiq>=135)?'black':'white';}
+            itemEl.style.color = getContrastYIQ(itemEl.style.backgroundColor);
+
+            const minutesFromDayStart = startTime.getHours() * 60 + startTime.getMinutes();
+            itemEl.style.top = `${minutesFromDayStart * pixelsPerMinute + dayHeaderHeightPx}px`;
+
+            let durationMinutes = (item.type === 'task' ? 30 : 60);
+            if (item.end_time) { const endTime = new Date(item.end_time); if (endTime > startTime) durationMinutes = Math.max(15, (endTime.getTime() - startTime.getTime()) / (1000 * 60)); else durationMinutes = 15; }
+            const itemCalculatedHeight = durationMinutes * pixelsPerMinute;
+            itemEl.style.height = `${Math.max(itemCalculatedHeight - 1, 18)}px`;
+
+            let iconClass = item.type === 'task' ? (item.completed ? 'fas fa-check-circle' : 'far fa-circle') : 'fas fa-calendar-alt';
+            let itemTimeStr = `${String(startTime.getHours()).padStart(2,'0')}:${String(startTime.getMinutes()).padStart(2,'0')}`;
+            if (item.end_time) itemTimeStr += ` - ${String(new Date(item.end_time).getHours()).padStart(2,'0')}:${String(new Date(item.end_time).getMinutes()).padStart(2,'0')}`;
+            
+            let descriptionPreviewHtml = '';
+            if (item.description && itemCalculatedHeight > 32) { // Show preview if item is tall enough
+                let plainTextDesc = item.description.replace(/\r\n|\r|\n/g, ' ').replace(/\*\*([^*]+)\*\*/g, '$1').replace(/__([^_]+)__/g, '$1').replace(/\*([^*]+)\*/g, '$1').replace(/_([^_]+)_/g, '$1').replace(/\[(.*?)\]\(.*?\)/g, '$1').replace(/`([^`]+)`/g, '$1').replace(/^#+\s*/gm, '').replace(/^>\s*/gm, '').replace(/^-\s*/gm, '').replace(/<[^>]*>/g, '');
+                descriptionPreviewHtml = `<div class="item-description-preview">${plainTextDesc.substring(0, 35)}${plainTextDesc.length > 35 ? '…' : ''}</div>`;
             }
+            itemEl.innerHTML = `<div class="item-content-wrapper"><i class="item-icon ${iconClass}"></i><span class="item-title ${itemCalculatedHeight > 28 ? 'multiline' : ''}">${item.title}</span></div><div class="item-time-display">${itemTimeStr}</div>${descriptionPreviewHtml}`;
+            if (item.type === 'task' && item.completed) itemEl.classList.add('completed');
+            itemEl.dataset.itemId = item.id; if(item.type === 'task') itemEl.dataset.occurrenceDate = item.occurrence_date;
+            itemEl.dataset.itemType = item.type;
+            itemEl.addEventListener('click', (e) => { e.stopPropagation(); showItemDetails(item); });
+            parentDayColumn.appendChild(itemEl);
         });
+        updateCurrentTimeLine();
     }
     
-    function showItemDetails(item) {
-        // Icon and Title
-        const iconEl = document.getElementById('modalTaskIcon');
-        iconEl.className = item.type === 'task' ? 'fas fa-tasks me-2' : 'fas fa-calendar-check me-2';
-        document.getElementById('modalTaskTitle').textContent = item.title;
-
-        // Time
-        const startTime = new Date(item.start_time);
-        let timeString = startTime.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
-        if (item.type === 'event' && item.end_time) {
-            const endTime = new Date(item.end_time);
-            timeString += ` - ${endTime.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}`;
-        }
-        document.getElementById('modalTaskTime').textContent = timeString;
-
-        // Category
-        const category = (item.category || 'General').charAt(0).toUpperCase() + (item.category || 'General').slice(1);
-        document.getElementById('modalTaskCategory').textContent = category;
-
-        // Description (handle basic markdown from templates)
-        const descriptionHtml = (item.description || "No description provided.")
-            .replace(/\n/g, '<br>')
-            .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-        document.getElementById('modalTaskDescription').innerHTML = descriptionHtml;
-
-        // Benefits & References (using placeholders)
-        let benefitsHtml = '<li><i class="fas fa-info-circle me-2"></i>See description for details.</li>';
-        const benefitsMatch = (item.description || '').match(/\*\*Benefits:\*\*\s*(.*)/i);
-        if (benefitsMatch && benefitsMatch[1]) {
-            benefitsHtml = benefitsMatch[1].split(',').map(b => `<li><i class="fas fa-check-circle text-success me-2"></i>${b.trim()}</li>`).join('');
-        }
-        document.getElementById('modalTaskBenefits').innerHTML = benefitsHtml;
-        document.getElementById('modalTaskReferences').textContent = 'References are included in the description text if available.';
-
-        // Edit button logic
-        const editBtn = document.getElementById('edit-task-btn');
-        if(item.type === 'task') {
-            editBtn.style.display = 'inline-block';
-            editBtn.href = `/calendar/task/${item.id}/edit/`;
-        } else {
-            // Events are assumed to be managed via an external source (like Google) and not editable here
-            editBtn.style.display = 'none';
-        }
-        taskModal.show();
+    function simpleMarkdownToHtml(md) {
+        if (!md || md.trim() === "") return '<p class="text-muted fst-italic">No description provided.</p>';
+        let html = md;
+        // 1. Basic HTML Entity Escaping
+        html = html.replace(/&/g, "&amp;")
+           .replace(/</g, "&lt;")
+           .replace(/>/g, "&gt;")
+           .replace(/"/g, "&quot;")
+           .replace(/'/g, "&#39;");
+        // Process block elements first
+        // Code blocks (```[\s\S]*?```)
+        html = html.replace(/```(\w*)\n([\s\S]*?)\n```/g, function(match, lang, code) { return '<pre><code class="language-' + (lang || '') + '">' + code.trim() + '</code></pre>';});
+        html = html.replace(/```([\s\S]*?)```/g, '<pre><code>$1</code></pre>'); // Fallback for no lang
+        // Blockquotes
+        html = html.replace(/^> (.*$)/gim, '<blockquote>$1</blockquote>');
+        // Horizontal rules
+        html = html.replace(/^---+$/gm, '<hr>').replace(/^\*\*\*+$/gm, '<hr>').replace(/^___+$/gm, '<hr>');
+        // Headings
+        html = html.replace(/^### (.*$)/gim, '<h6>$1</h6>').replace(/^## (.*$)/gim, '<h5>$1</h5>').replace(/^# (.*$)/gim, '<h4>$1</h4>');
+        // Unordered lists
+        html = html.replace(/^(\s*[-*+]\s+.+(\n|$))+/gim, function(match) { const items = match.trim().split('\n').map(line => `<li>${line.replace(/^\s*[-*+]\s+/, '').trim()}</li>`).join(''); return `<ul>${items}</ul>`; });
+        // Ordered lists
+        html = html.replace(/^(\s*\d+\.\s+.+(\n|$))+/gim, function(match) { const items = match.trim().split('\n').map(line => `<li>${line.replace(/^\s*\d+\.\s+/, '').trim()}</li>`).join(''); return `<ol>${items}</ol>`; });
+        // Process inline elements last
+        html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/__([^_]+)__/g, '<strong>$1</strong>'); // Bold
+        html = html.replace(/\*(.*?)\*/g, '<em>$1</em>').replace(/(^|\W)_([^_]+)_(\W|$)/g, '$1<em>$2</em>$3'); // Italic
+        html = html.replace(/~~(.*?)~~/g, '<del>$1</del>'); // Strikethrough
+        html = html.replace(/`([^`]+)`/g, '<code>$1</code>'); // Inline code
+        html = html.replace(/\[([^\[]+)\]\((.*?)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>'); // Links
+        // Paragraphs and line breaks (simplified)
+        html = html.split(/\n\s*\n/).map(paragraph => paragraph.trim() ? `<p>${paragraph.replace(/\n/g, '<br>')}</p>` : '').join('');
+        html = html.replace(/<br>\s*<(ul|ol|li|h[1-6]|blockquote|pre|hr)/gi, '<$1'); // Clean up <br> before block elements
+        html = html.replace(/<\/(ul|ol|li|h[1-6]|blockquote|pre)><br>/gi, '</$1>');  // Clean up <br> after block elements
+        return html;
     }
 
-    // Navigation helpers
-    function getStartDateParam(date) {
-        return `start_date=${date.toISOString().split('T')[0]}`;
+    function showItemDetails(item) { 
+        document.getElementById('modalItemIcon').className = item.type === 'task' ? 'fas fa-tasks me-2' : 'fas fa-calendar-check me-2';
+        document.getElementById('modalItemTitle').textContent = item.title;
+        const startTime = new Date(item.start_time); const options = { weekday:'short', month:'short', day:'numeric', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }; let timeString = startTime.toLocaleTimeString('en-GB', options).replace(',', '');
+        if (item.end_time) { const endTime = new Date(item.end_time); timeString += ` - ${endTime.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })}`; const dMs = endTime.getTime() - startTime.getTime(); const dH = Math.floor(dMs/(36e5)); const dM = Math.floor((dMs%(36e5))/(6e4)); if(dH>0||dM>0) timeString+=` (${dH>0?dH+'h ':''}${dM}m)`;} else if (item.type === 'task') timeString+=` (approx. 30 min)`;
+        document.getElementById('modalItemTime').textContent = timeString;
+        const pBadge = document.getElementById('modalItemPriorityBadge'); if(item.priority){ pBadge.textContent = item.priority; let bCls='bg-secondary'; if (item.priority.toLowerCase()==='high')bCls='bg-danger'; else if(item.priority.toLowerCase()==='medium')bCls='bg-warning text-dark'; else if(item.priority.toLowerCase()==='low')bCls='bg-success'; pBadge.className=`badge ${bCls}`; } else { pBadge.textContent = 'N/A'; pBadge.className='badge bg-light text-dark';}
+        
+        document.getElementById('modalItemDescription').innerHTML = simpleMarkdownToHtml(item.description);
+        
+        const viewFullDescBtn = document.getElementById('viewFullDescriptionBtn');
+        if (item.description && item.description.trim().length > 0) {
+            if (item.type === 'task') viewFullDescBtn.href = `/calendar/task/${item.id}/description/`;
+            else if (item.type === 'event') viewFullDescBtn.href = `/calendar/event/${item.id}/description/`;
+            viewFullDescBtn.style.display = (item.type === 'task' || item.type === 'event') ? 'inline-block' : 'none';
+        } else { viewFullDescBtn.style.display = 'none'; }
+
+        const tSpec=document.getElementById('modalTaskSpecifics'), tComp=document.getElementById('modalTaskCompletionSection'), eBtn=document.getElementById('edit-item-btn');
+        if(item.type==='task'){ tSpec.style.display='block'; document.getElementById('modalTaskColorPreview').style.backgroundColor=item.color||'var(--event-color)'; document.getElementById('modalTaskColor').textContent=item.color?item.color.toUpperCase():'Default'; tComp.style.display='block'; const mBtn=document.getElementById('modalMarkCompleteBtn'), sTxt=document.getElementById('modalTaskStatusText'); sTxt.textContent=item.completed?"Completed":"Pending"; mBtn.textContent=item.completed?"Mark Pending":"Mark Complete"; mBtn.className=item.completed?"btn btn-sm btn-outline-warning ms-2":"btn btn-sm btn-outline-success ms-2"; mBtn.dataset.taskId=item.id; mBtn.dataset.occurrenceDate=item.occurrence_date; eBtn.style.display='inline-block'; eBtn.href=`/calendar/task/${item.id}/edit/`; } else { tSpec.style.display='none'; tComp.style.display='none'; eBtn.style.display='none'; }
+        itemModal.show();
     }
 
-    document.getElementById('prev-week').addEventListener('click', (e) => {
-        e.preventDefault();
-        const newDate = new Date(currentWeekStartDate);
-        newDate.setDate(newDate.getDate() - 7);
-        currentWeekStartDate = newDate;
-        console.log("Prev week to:", currentWeekStartDate.toISOString());
-        fetchAndRenderCalendar(getStartDateParam(currentWeekStartDate));
+    document.getElementById('modalMarkCompleteBtn').addEventListener('click', async function() { 
+        const taskId=this.dataset.taskId, occDate=this.dataset.occurrenceDate; try { const resp=await fetch(`/calendar/task/${taskId}/complete/`,{method:'POST',headers:{'Content-Type':'application/json','X-CSRFToken':csrfToken},body:JSON.stringify({date:occDate})}); const res=await resp.json(); if(resp.ok&&res.success){ itemModal.hide(); const idx=activeCalendarItems.findIndex(i=>i.id==taskId&&i.type==='task'&&i.occurrence_date==occDate); if(idx>-1)activeCalendarItems[idx].completed=(res.status==='completed'); renderGrid(currentWeekStartDate, activeCalendarItems); } else { alert("Error: "+(res.error||"Unknown error."));}} catch(err){console.error("Mark complete error:",err); alert("An error occurred.");}
     });
 
-    document.getElementById('next-week').addEventListener('click', (e) => {
-        e.preventDefault();
-        const newDate = new Date(currentWeekStartDate);
-        newDate.setDate(newDate.getDate() + 7);
-        currentWeekStartDate = newDate;
-        console.log("Next week to:", currentWeekStartDate.toISOString());
-        fetchAndRenderCalendar(getStartDateParam(currentWeekStartDate));
-    });
-
-    document.getElementById('current-week').addEventListener('click', (e) => {
-        e.preventDefault();
-        const today = new Date();
-        const monday = new Date(today.setDate(today.getDate() - (today.getDay() + 6) % 7));
-        currentWeekStartDate = monday;
-        console.log("Current week to:", monday.toISOString());
-        fetchAndRenderCalendar(getStartDateParam(currentWeekStartDate));
-    });
-
-    // Initial Load
-    const urlParams = new URLSearchParams(window.location.search);
-    const startDateParam = urlParams.get('start_date');
-    if (startDateParam) {
-        currentWeekStartDate = new Date(startDateParam + 'T00:00:00');
-        fetchAndRenderCalendar(`start_date=${startDateParam}`);
-    } else {
-        const today = new Date();
-        const monday = new Date(today.setDate(today.getDate() - (today.getDay() + 6) % 7));
-        currentWeekStartDate = monday;
-        fetchAndRenderCalendar(getStartDateParam(monday));
+    function updateCurrentTimeLine() { 
+        document.querySelectorAll('.current-time-line-wrapper').forEach(l=>l.remove()); const now=new Date(); const calendarGridElement = document.getElementById('calendarGrid'); const timeCol = document.querySelector('.time-column'); if(calendarGridElement && timeCol){ const minutesFromDayStart = now.getHours() * 60 + now.getMinutes(); const topPosition = minutesFromDayStart * pixelsPerMinute + dayHeaderHeightPx; const lineWrapper = document.createElement('div'); lineWrapper.className = 'current-time-line-wrapper'; lineWrapper.style.top = `${topPosition}px`; const line = document.createElement('div'); line.className = 'current-time-line'; const indicator = document.createElement('div'); indicator.className = 'current-time-line-indicator'; lineWrapper.appendChild(indicator); lineWrapper.appendChild(line); calendarGridElement.appendChild(lineWrapper); }
     }
+    setInterval(updateCurrentTimeLine, 30000);
+
+    function getMonday(d) {d=new Date(d);var day=d.getDay(),diff=d.getDate()-day+(day==0?-6:1);d.setDate(diff); d.setHours(0,0,0,0); return d;}
+    function getStartDateParam(d){return`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`}
+    document.getElementById('prev-week').addEventListener('click',(e)=>{e.preventDefault();if(!currentWeekStartDate)return;const nD=new Date(currentWeekStartDate);nD.setDate(nD.getDate()-7);nD.setHours(0,0,0,0);fetchAndRenderCalendar(getStartDateParam(nD))});
+    document.getElementById('next-week').addEventListener('click',(e)=>{e.preventDefault();if(!currentWeekStartDate)return;const nD=new Date(currentWeekStartDate);nD.setDate(nD.getDate()+7);nD.setHours(0,0,0,0);fetchAndRenderCalendar(getStartDateParam(nD))});
+    document.getElementById('current-week').addEventListener('click',(e)=>{e.preventDefault();const m=getMonday(new Date());fetchAndRenderCalendar(getStartDateParam(m))});
+    const uP=new URLSearchParams(window.location.search),sDP=uP.get('start_date'); let iDL; if(sDP){const[y,m,d]=sDP.split('-').map(Number);iDL=getMonday(new Date(y,m-1,d));}else{iDL=getMonday(new Date())} iDL.setHours(0,0,0,0);fetchAndRenderCalendar(getStartDateParam(iDL));
 });
 </script>
-
 </body>
 </html>

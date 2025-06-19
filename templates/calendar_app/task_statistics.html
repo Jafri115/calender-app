@@ -1,0 +1,352 @@
+{% extends 'base.html' %}
+
+{% block title %}Task Statistics - Django Calendar{% endblock %}
+
+{% block head_extra %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+    :root {
+        --islamic-green: #2d5a3d;
+        --light-gray: #f8f9fa;
+        --border-radius: 10px;
+        --shadow: 0 4px 12px rgba(0,0,0,0.08);
+        --text-muted: #6c757d;
+    }
+    
+    .stat-card {
+        background-color: #fff;
+        border-radius: var(--border-radius);
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+        box-shadow: var(--shadow);
+        text-align: center;
+        transition: transform 0.2s ease;
+    }
+    
+    .stat-card:hover {
+        transform: translateY(-2px);
+    }
+    
+    .stat-card h4 {
+        color: var(--islamic-green);
+        margin-bottom: 0.5rem;
+        font-size: 2rem;
+        font-weight: 700;
+    }
+    
+    .stat-card p {
+        color: var(--text-muted);
+        font-size: 0.9rem;
+        margin-bottom: 0;
+        font-weight: 500;
+    }
+    
+    .chart-container {
+        position: relative;
+        height: 400px;
+        width: 100%;
+        background-color: #fff;
+        padding: 1.5rem;
+        border-radius: var(--border-radius);
+        box-shadow: var(--shadow);
+        margin-bottom: 1.5rem;
+    }
+    
+    .chart-container h5 {
+        color: var(--islamic-green);
+        margin-bottom: 1rem;
+        font-weight: 600;
+    }
+    
+    .chart-canvas {
+        height: 100% !important;
+        max-height: 300px;
+    }
+    
+    .task-list-item {
+        padding: 1rem 1.25rem;
+        border-bottom: 1px solid #e9ecef;
+    }
+    
+    .task-list-item:last-child {
+        border-bottom: none;
+    }
+    
+    .task-icon {
+        font-size: 1.1rem;
+        margin-right: 0.75rem;
+    }
+    
+    .completion-badge {
+        font-size: 0.85rem;
+        padding: 0.5rem 0.75rem;
+    }
+    
+    .page-header {
+        background: linear-gradient(135deg, var(--islamic-green), #3a6d4a);
+        color: white;
+        padding: 2rem 0;
+        margin-bottom: 2rem;
+        border-radius: var(--border-radius);
+    }
+    
+    .page-header h2 {
+        margin: 0;
+        font-weight: 600;
+    }
+    
+    .btn-back {
+        background-color: rgba(255,255,255,0.1);
+        border: 1px solid rgba(255,255,255,0.3);
+        color: white;
+        transition: all 0.3s ease;
+    }
+    
+    .btn-back:hover {
+        background-color: rgba(255,255,255,0.2);
+        color: white;
+        transform: translateY(-1px);
+    }
+    
+    .empty-state {
+        text-align: center;
+        padding: 3rem 1rem;
+        color: var(--text-muted);
+    }
+    
+    .empty-state i {
+        font-size: 3rem;
+        margin-bottom: 1rem;
+        opacity: 0.5;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Page Header -->
+    <div class="page-header">
+        <div class="container">
+            <div class="d-flex justify-content-between align-items-center">
+                <h2>
+                    <i class="fas fa-chart-line me-3" aria-hidden="true"></i>
+                    Task Completion Statistics
+                </h2>
+                <a href="{% url 'calendar:calendar_view' %}" class="btn btn-back" aria-label="Return to calendar view">
+                    <i class="fas fa-calendar-alt me-2" aria-hidden="true"></i>
+                    Back to Calendar
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <!-- Statistics Cards -->
+        <section aria-labelledby="stats-heading">
+            <h3 id="stats-heading" class="visually-hidden">Task Statistics Overview</h3>
+            <div class="row">
+                <div class="col-lg-4 col-md-6 mb-3">
+                    <div class="stat-card">
+                        <h4 aria-describedby="total-desc">{{ total_completed_count|default:0 }}</h4>
+                        <p id="total-desc">Total Tasks Completed</p>
+                    </div>
+                </div>
+                <div class="col-lg-4 col-md-6 mb-3">
+                    <div class="stat-card">
+                        <h4 aria-describedby="week-desc">{{ completions_last_week|default:0 }}</h4>
+                        <p id="week-desc">Completed (Last 7 Days)</p>
+                    </div>
+                </div>
+                <div class="col-lg-4 col-md-6 mb-3">
+                    <div class="stat-card">
+                        <h4 aria-describedby="unique-desc">{{ tasks_completion_counts|length|default:0 }}</h4>
+                        <p id="unique-desc">Unique Tasks with Completions</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Chart Section -->
+        <section aria-labelledby="chart-heading">
+            <div class="row">
+                <div class="col-12">
+                    <div class="chart-container">
+                        <h5 id="chart-heading">Completions per Task</h5>
+                        {% if tasks_completion_counts %}
+                            <canvas id="completionsPerTaskChart" class="chart-canvas" aria-label="Bar chart showing number of completions per task"></canvas>
+                        {% else %}
+                            <div class="empty-state">
+                                <i class="fas fa-chart-bar" aria-hidden="true"></i>
+                                <p>No task completion data available to display chart.</p>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </section>
+        
+        <!-- Detailed Task List -->
+        <section aria-labelledby="details-heading">
+            <div class="row">
+                <div class="col-12">
+                    <div class="card shadow-sm">
+                        <div class="card-header bg-light">
+                            <h5 id="details-heading" class="mb-0">
+                                <i class="fas fa-list me-2" aria-hidden="true"></i>
+                                Detailed Completions by Task
+                            </h5>
+                        </div>
+                        <div class="card-body p-0">
+                            {% if tasks_completion_counts %}
+                                <div class="list-group list-group-flush">
+                                    {% for task_stat in tasks_completion_counts %}
+                                        <div class="list-group-item task-list-item d-flex justify-content-between align-items-center">
+                                            <span class="d-flex align-items-center">
+                                                <i class="fas fa-check-circle task-icon" 
+                                                   style="color: {{ task_stat.color|default:'var(--islamic-green)' }};" 
+                                                   aria-hidden="true"></i>
+                                                <span>{{ task_stat.title }}</span>
+                                            </span>
+                                            <span class="badge bg-success completion-badge" 
+                                                  aria-label="{{ task_stat.num_completions }} completions">
+                                                {{ task_stat.num_completions }}
+                                            </span>
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                            {% else %}
+                                <div class="empty-state">
+                                    <i class="fas fa-tasks" aria-hidden="true"></i>
+                                    <p>No tasks have been completed yet.</p>
+                                    <small class="text-muted">Complete some tasks to see statistics here.</small>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{% if tasks_completion_counts %}
+<script>
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Prepare chart data
+    const taskLabels = [
+        {% for task_stat in tasks_completion_counts %}
+            "{{ task_stat.title|escapejs }}"{% if not forloop.last %},{% endif %}
+        {% endfor %}
+    ];
+    
+    const taskCompletionData = [
+        {% for task_stat in tasks_completion_counts %}
+            {{ task_stat.num_completions|default:0 }}{% if not forloop.last %},{% endif %}
+        {% endfor %}
+    ];
+    
+    const taskColors = [
+        {% for task_stat in tasks_completion_counts %}
+            "{{ task_stat.color|default:'#4CAF50'|escapejs }}"{% if not forloop.last %},{% endif %}
+        {% endfor %}
+    ];
+
+    // Helper function to darken colors for borders
+    function darkenColor(color, amount = 20) {
+        if (!/^#[0-9A-F]{6}$/i.test(color) && !/^#[0-9A-F]{3}$/i.test(color)) {
+            return color;
+        }
+        
+        const hex = color.replace('#', '');
+        const r = Math.max(0, parseInt(hex.substr(0, 2), 16) - amount);
+        const g = Math.max(0, parseInt(hex.substr(2, 2), 16) - amount);
+        const b = Math.max(0, parseInt(hex.substr(4, 2), 16) - amount);
+        
+        return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
+    }
+
+    // Create chart
+    const ctx = document.getElementById('completionsPerTaskChart');
+    if (ctx) {
+        new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: taskLabels,
+                datasets: [{
+                    label: 'Number of Completions',
+                    data: taskCompletionData,
+                    backgroundColor: taskColors,
+                    borderColor: taskColors.map(color => darkenColor(color)),
+                    borderWidth: 2,
+                    borderRadius: 4,
+                    borderSkipped: false
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: {
+                    intersect: false,
+                    mode: 'index'
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            stepSize: 1,
+                            precision: 0,
+                            callback: function(value) {
+                                return Number.isInteger(value) ? value : '';
+                            }
+                        },
+                        grid: {
+                            color: 'rgba(0,0,0,0.1)'
+                        }
+                    },
+                    x: {
+                        grid: {
+                            display: false
+                        },
+                        ticks: {
+                            maxRotation: 45,
+                            minRotation: 0
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        backgroundColor: 'rgba(0,0,0,0.8)',
+                        titleColor: '#fff',
+                        bodyColor: '#fff',
+                        borderColor: 'rgba(255,255,255,0.1)',
+                        borderWidth: 1,
+                        callbacks: {
+                            title: function(context) {
+                                return context[0].label;
+                            },
+                            label: function(context) {
+                                const count = context.parsed.y;
+                                return `Completions: ${count}`;
+                            }
+                        }
+                    }
+                },
+                animation: {
+                    duration: 1000,
+                    easing: 'easeOutQuart'
+                }
+            }
+        });
+    } else {
+        console.error("Chart canvas element not found");
+    }
+});
+</script>
+{% endif %}
+{% endblock %}

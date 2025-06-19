@@ -3,98 +3,98 @@
 {% block title %}Create Task - Django Calendar{% endblock %}
 
 {% block content %}
-<div class="row justify-content-center">
-    <div class="col-md-8">
-        <div class="card">
-            <div class="card-header">
-                <h3 class="mb-0">
-                    <i class="fas fa-tasks me-2"></i>Create New Task
-                </h3>
-            </div>
-            <div class="card-body">
-                <form method="post" id="task-form">
-                    {% csrf_token %}
-                    <div class="mb-3">
-                        <label for="title" class="form-label">Task Title *</label>
-                        <input type="text" class="form-control" id="title" name="title" required value="{{ initial_data.title|default:'' }}">
-                    </div>
-
-                    <div class="mb-3">
-                        <label for="description" class="form-label">Description</label>
-                        <textarea class="form-control" id="description" name="description" rows="5" placeholder="Enter task description, routine details, or spiritual goals">{{ initial_data.description|default:'' }}</textarea>
-                    </div>
-
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label for="frequency" class="form-label">Frequency</label>
-                            <select class="form-select" id="frequency" name="frequency">
-                                {% for value, name in frequencies %}
-                                    <option value="{{ value }}" {% if initial_data.frequency == value %}selected{% endif %}>{{ name }}</option>
-                                {% endfor %}
-                            </select>
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h3 class="mb-0"><i class="fas fa-tasks me-2"></i>Create New Task</h3>
+                </div>
+                <div class="card-body">
+                    <form method="post" id="task-form">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label for="title" class="form-label">Task Title *</label>
+                            <input type="text" class="form-control" id="title" name="title" required value="{{ initial_data.title|default:'' }}">
                         </div>
-                        <!-- <div class="col-md-6 mb-3">
-                            <label for="priority" class="form-label">Priority</label>
-                            <select class="form-select" id="priority" name="priority">
-                                {% for value, name in priorities %}
-                                    <option value="{{ value }}" {% if initial_data.priority == value %}selected{% endif %}>{{ name }}</option>
-                                {% endfor %}
-                            </select>
-                        </div> -->
-                    </div>
 
-                    <div id="once-fields">
-                        <label for="due_date" class="form-label">Due Date & Time *</label>
-                        <input type="datetime-local" class="form-control" id="due_date" name="due_date" value="{{ initial_data.due_date|date:'Y-m-d\TH:i' }}">
-                    </div>
+                        <div class="mb-3">
+                            <label for="description" class="form-label">Description</label>
+                            <textarea class="form-control" id="description" name="description" rows="4" placeholder="Enter task description...">{{ initial_data.description|default:'' }}</textarea>
+                        </div>
 
-                    <div id="recurring-fields" class="row">
-                        <div class="col-md-4 mb-3">
-                            <label for="time_of_day" class="form-label">Time of Day</label>
-                            <input type="time" class="form-control" id="time_of_day" name="time_of_day" value="{{ initial_data.time_of_day|time:'H:i' }}">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="start_date" class="form-label">Date *</label>
+                                <input type="date" class="form-control" id="start_date" name="start_date" value="{{ initial_data.start_date|default_if_none:'' }}" required>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="priority" class="form-label">Priority</label>
+                                <select class="form-select" id="priority" name="priority">
+                                    {% for value, name in priorities %}
+                                    <option value="{{ value }}" {% if initial_data.priority == value or not initial_data.priority and value == 'Medium' %}selected{% endif %}>{{ name }}</option>                                    {% endfor %}
+                                </select>
+                            </div>
                         </div>
-                        <div class="col-md-4 mb-3" id="weekday-wrapper">
-                            <label for="weekday" class="form-label">Day of Week</label>
-                            <select class="form-select" id="weekday" name="weekday">
-                                {% for value, name in weekdays %}
-                                    <option value="{{ value }}" {% if initial_data.weekday == value %}selected{% endif %}>{{ name }}</option>
-                                {% endfor %}
-                            </select>
-                        </div>
-                        <div class="col-md-4 mb-3">
-                            <label for="start_date" class="form-label">Start Date</label>
-                            <input type="date" class="form-control" id="start_date" name="start_date" value="{{ initial_data.start_date|date:'Y-m-d' }}">
-                        </div>
-                    </div>
 
-                    <div class="mb-4">
-                        <h5><i class="fas fa-star-and-crescent me-2"></i>Spiritual Routine Templates</h5>
-                        <p class="text-muted small">Click to auto-fill with common Shia spiritual routines:</p>
-                        <div class="btn-group-vertical w-100 mb-3" role="group">
-                            <button type="button" class="btn btn-outline-info template-btn" data-template="fajr-routine">
-                                <i class="fas fa-moon me-2"></i>Pre-Fajr Spiritual Routine
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="time_of_day" class="form-label">Start Time (24h) *</label>
+                                <input type="time" class="form-control" id="time_of_day" name="time_of_day" value="{{ initial_data.time_of_day|default_if_none:'' }}" required>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="end_time_of_day" class="form-label">End Time (24h, Optional)</label>
+                                <input type="time" class="form-control" id="end_time_of_day" name="end_time_of_day" value="{{ initial_data.end_time_of_day|default_if_none:'' }}">
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="frequency" class="form-label">Frequency</label>
+                                <select class="form-select" id="frequency" name="frequency">
+                                    {% for value, name in frequencies %}
+                                        <option value="{{ value }}" {% if initial_data.frequency == value or not initial_data.frequency and value == 'once' %}selected{% endif %}>{{ name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                             <div class="col-md-6 mb-3">
+                                <label for="color" class="form-label">Task Color</label>
+                                <input type="color" class="form-control form-control-color" id="color" name="color" value="{{ initial_data.color|default:'#AEC6CF' }}">
+                                <div class="mt-2" id="color-palette">
+                                    <!-- Pastel colors will be added by JS -->
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="recurring-options" style="display: none;">
+                             <div class="row">
+                                <div class="col-md-6 mb-3" id="weekday-wrapper" style="display: none;">
+                                    <label for="weekday" class="form-label">Day of Week (for Weekly)</label>
+                                    <select class="form-select" id="weekday" name="weekday">
+                                        {% for value, name in weekdays %}
+                                            <option value="{{ value }}" {% if initial_data.weekday|stringformat:"s" == value|stringformat:"s" %}selected{% endif %}>{{ name }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="recurring_end_date" class="form-label">Recurring End Date (Optional)</label>
+                                    <input type="date" class="form-control" id="recurring_end_date" name="recurring_end_date" value="{{ initial_data.recurring_end_date|default_if_none:'' }}">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <hr class="my-4">
+
+                        <div class="d-flex justify-content-between">
+                            <a href="{% url 'calendar:calendar_view' %}" class="btn btn-outline-secondary">
+                                <i class="fas fa-arrow-left me-2"></i>Cancel
+                            </a>
+                            <button type="submit" class="btn btn-success">
+                                <i class="fas fa-save me-2"></i>Create Task
                             </button>
-                            <button type="button" class="btn btn-outline-info template-btn" data-template="daily-dhikr">
-                                <i class="fas fa-pray me-2"></i>Daily Dhikr & Tasbih
-                            </button>
-                            <button type="button" class="btn btn-outline-info template-btn" data-template="quran-recitation">
-                                <i class="fas fa-book-open me-2"></i>Quran Recitation Schedule
-                            </button>
-                            <button type="button" class="btn btn-outline-info template-btn" data-template="dua-kumail">
-                                <i class="fas fa-hands me-2"></i>Thursday Dua Kumail
-                            </button>
                         </div>
-                    </div>
-
-                    <div class="d-flex justify-content-between">
-                        <a href="{% url 'calendar:calendar_view' %}" class="btn btn-secondary">
-                            <i class="fas fa-arrow-left me-2"></i>Cancel
-                        </a>
-                        <button type="submit" class="btn btn-success">
-                            <i class="fas fa-save me-2"></i>Create Task
-                        </button>
-                    </div>
-                </form>
+                    </form>
+                </div>
             </div>
         </div>
     </div>
@@ -103,145 +103,72 @@
 
 {% block scripts %}
 <script>
-// Set minimum date to now
-const now = new Date();
-const year = now.getFullYear();
-const month = String(now.getMonth() + 1).padStart(2, '0');
-const day = String(now.getDate()).padStart(2, '0');
-const hours = String(now.getHours()).padStart(2, '0');
-const minutes = String(now.getMinutes()).padStart(2, '0');
+document.addEventListener('DOMContentLoaded', function() {
+    const frequencySelect = document.getElementById('frequency');
+    const recurringOptionsDiv = document.getElementById('recurring-options');
+    const weekdayWrapper = document.getElementById('weekday-wrapper');
 
-const minDateTime = `${year}-${month}-${day}T${hours}:${minutes}`;
-document.getElementById('due_date').min = minDateTime;
-
-// Toggle frequency fields same as edit_task.html
-const frequencySelect = document.getElementById('frequency');
-const onceFields = document.getElementById('once-fields');
-const recurringFields = document.getElementById('recurring-fields');
-const weekdayWrapper = document.getElementById('weekday-wrapper');
-
-function toggleFields() {
-    const freq = frequencySelect.value;
-    onceFields.style.display = (freq === 'once') ? 'block' : 'none';
-    recurringFields.style.display = (freq !== 'once') ? 'flex' : 'none';
-    weekdayWrapper.style.display = (freq === 'weekly') ? 'block' : 'none';
-    document.getElementById('due_date').required = (freq === 'once');
-    document.getElementById('time_of_day').required = (freq !== 'once');
-}
-frequencySelect.addEventListener('change', toggleFields);
-toggleFields();
-
-// Spiritual routine templates
-const templates = {
-    'fajr-routine': {
-        title: 'Pre-Fajr Spiritual Routine',
-        description: `🌙 **Daily Shia Spiritual Routine (with Rizq Focus)**
-**Goal**: Build barakah, taqwa, and inner peace — while seeking halal sustenance.
-
-🌄 **Before Fajr (2:30–3:00 AM)**
-📿 **Salat al-Layl (Tahajjud)** – one of the **strongest acts to increase sustenance**, per hadith.
-• 8 rak'at in 2s + 2 rak'at of Shafa' + 1 rak'ah of Witr.
-• In **Qunoot of Witr**, ask for forgiveness, rizq, and spiritual upliftment.
-
-🕯️ **Dua before Fajr**: Recite **"Astaghfirullah Rabbi wa Atubu Ilayh"** 70 times.
-📖 *Optional:* Recite a few verses from Surah Al-Waqi'ah (verses 1-96) for increased rizq.`,
-        priority: 'high'
-    },
-    'daily-dhikr': {
-        title: 'Daily Dhikr & Tasbih',
-        description: `📿 **Daily Dhikr Routine**
-
-**After each prayer:**
-• Tasbih Fatimah (ع): 34x Allahu Akbar, 33x Alhamdulillah, 33x Subhanallah
-• Recite Ayat al-Kursi
-• 10x Salawat on Prophet & Ahl al-Bayt
-
-**Morning (after Fajr):**
-• 100x "La hawla wa la quwwata illa billah"
-• 100x "Astaghfirullah"
-• Dua al-Faraj for Imam Mahdi (aj)
-
-**Evening (after Maghrib):**
-• Recite Surah al-Mulk
-• 70x "Astaghfirullah Rabbi wa Atubu Ilayh"`,
-        priority: ''
-    },
-    'quran-recitation': {
-        title: 'Daily Quran Recitation',
-        description: `📖 **Quran Recitation Schedule**
-
-**Daily Goal:** Complete Quran in 30 days (1 Juz per day)
-
-**Recommended Times:**
-• **Fajr:** 10-15 minutes - Focus on reflection
-• **After Maghrib:** 15-20 minutes - Melodious recitation
-• **Before sleep:** 5-10 minutes - Peaceful verses
-
-**Special Focus:**
-• **Fridays:** Extra recitation of Surah al-Kahf
-• **Thursdays:** Surah al-Dukhan
-• **Daily:** At least 1 page minimum
-
-**Benefits:** Spiritual purification, increased barakah, divine protection`,
-        priority: ''
-    },
-    'dua-kumail': {
-        title: 'Thursday Night - Dua Kumail',
-        description: `🤲 **Dua Kumail - Thursday Night**
-
-**Timing:** Thursday night after Maghrib or Isha
-**Significance:** Taught by Imam Ali (as) to Kumail ibn Ziyad
-
-**Preparation:**
-• Perform Wudu
-• Find quiet, clean space
-• Face Qibla if possible
-• Recite with contemplation and humility
-
-**Additional Recommended:**
-• Recite Surah al-Fatiha 7x before starting
-• Make personal duas after completion
-• Ask for forgiveness, guidance, and increased rizq
-
-**Benefits:** Forgiveness of sins, protection from difficulties, spiritual elevation`,
-        priority: ''
-    }
-};
-
-document.querySelectorAll('.template-btn').forEach(btn => {
-    btn.addEventListener('click', function() {
-        const templateKey = this.dataset.template;
-        const template = templates[templateKey];
-        
-        if (template) {
-            document.getElementById('title').value = template.title;
-            document.getElementById('description').value = template.description;
-            if(template.priority){
-                document.getElementById('priority').value = template.priority;
-            }
-            
-            // Set due date to tomorrow or specific times for templates
-            const tomorrow = new Date();
-            tomorrow.setDate(tomorrow.getDate() + 1);
-
-            if (templateKey === 'fajr-routine') {
-                tomorrow.setHours(2, 30); // 2:30 AM
-            } else if (templateKey === 'dua-kumail') {
-                // Next Thursday
-                const daysUntilThursday = (4 - tomorrow.getDay() + 7) % 7 || 7;
-                tomorrow.setDate(tomorrow.getDate() + daysUntilThursday);
-                tomorrow.setHours(20, 0); // 8 PM
+    function toggleRecurringFields() { /* ... Same as before ... */
+        const freq = frequencySelect.value;
+        if (freq === 'daily' || freq === 'weekly') {
+            recurringOptionsDiv.style.display = 'block';
+            document.getElementById('recurring_end_date').disabled = false;
+            if (freq === 'weekly') {
+                weekdayWrapper.style.display = 'block';
+                document.getElementById('weekday').required = true;
+                document.getElementById('weekday').disabled = false;
             } else {
-                tomorrow.setHours(9, 0);
+                weekdayWrapper.style.display = 'none';
+                document.getElementById('weekday').required = false;
+                document.getElementById('weekday').disabled = true;
             }
-            
-            const dueDateStr = tomorrow.getFullYear() + '-' +
-                String(tomorrow.getMonth() + 1).padStart(2, '0') + '-' +
-                String(tomorrow.getDate()).padStart(2, '0') + 'T' +
-                String(tomorrow.getHours()).padStart(2, '0') + ':' +
-                String(tomorrow.getMinutes()).padStart(2, '0');
-            document.getElementById('due_date').value = dueDateStr;
+        } else {
+            recurringOptionsDiv.style.display = 'none';
+            weekdayWrapper.style.display = 'none';
+            document.getElementById('weekday').required = false;
+            document.getElementById('weekday').disabled = true;
+            document.getElementById('recurring_end_date').disabled = true;
+            document.getElementById('recurring_end_date').value = '';
+            document.getElementById('weekday').value = '';
         }
+    }
+    frequencySelect.addEventListener('change', toggleRecurringFields);
+    toggleRecurringFields();
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const datetimeParam = urlParams.get('datetime');
+    if (datetimeParam) {
+        try {
+            const dt = new Date(datetimeParam);
+            document.getElementById('start_date').value = dt.toISOString().split('T')[0];
+            const hours = String(dt.getHours()).padStart(2, '0');
+            const minutes = String(dt.getMinutes()).padStart(2, '0');
+            document.getElementById('time_of_day').value = `${hours}:${minutes}`;
+        } catch (e) { console.warn("Could not parse datetime param:", datetimeParam); }
+    }
+
+    // --- Add Color Palette ---
+    const colorInput = document.getElementById('color');
+    const colorPaletteContainer = document.getElementById('color-palette');
+    const pastelColors = ['#AEC6CF', '#C8E6C9', '#FFD8B1', '#F8BBD0', '#D1C4E9', '#FFF9C4', '#B2DFDB', '#FFCCBC', '#CFD8DC'];
+
+    pastelColors.forEach(color => {
+        const colorButton = document.createElement('button');
+        colorButton.type = 'button';
+        colorButton.style.backgroundColor = color;
+        colorButton.style.width = '24px';
+        colorButton.style.height = '24px';
+        colorButton.style.borderRadius = '50%';
+        colorButton.style.border = '1px solid #ccc';
+        colorButton.style.marginRight = '5px';
+        colorButton.style.cursor = 'pointer';
+        colorButton.title = color; // Show hex on hover
+        colorButton.addEventListener('click', function() {
+            colorInput.value = color;
+            // Optionally trigger change event if other JS relies on it
+            colorInput.dispatchEvent(new Event('input', { bubbles: true }));
+        });
+        colorPaletteContainer.appendChild(colorButton);
     });
 });
 </script>
