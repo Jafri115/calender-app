@@ -25,98 +25,89 @@ DEFAULT_TASK_COLORS = [
 
 @login_required
 def week_data(request):
-    # FIX: Changed 'start_date' to 'date' to match the parameter sent by the frontend JavaScript.
-    date_param_str = request.GET.get('date')
+    date_param_str = request.GET.get('date') 
     
     try:
         if date_param_str:
-            # The date from the parameter becomes the reference point for the week.
             ref_date = date.fromisoformat(date_param_str)
-            week_start = ref_date - timedelta(days=ref_date.weekday())
+            week_start = ref_date
         else:
-            # If no date is provided, default to the current week.
-            today = date.today()
-            week_start = today - timedelta(days=today.weekday()) 
+            today_date = timezone.now().date()
+            week_start = today_date - timedelta(days=today_date.weekday()) 
     except (ValueError, TypeError):
-        return JsonResponse({'error': 'Invalid date format.'}, status=400)
+        today_date = timezone.now().date()
+        week_start = today_date - timedelta(days=today_date.weekday())
 
     week_end = week_start + timedelta(days=6)
     user_tasks = Task.objects.filter(user=request.user)
-    task_occurrences = []
+    items_for_calendar = []
 
-    completions_in_week = TaskCompletion.objects.filter(
+    completions_in_week_qs = TaskCompletion.objects.filter(
         user=request.user,
         completion_date__gte=week_start,
         completion_date__lte=week_end
-    ).values_list('task_id', 'completion_date')
-    completed_set = {(item[0], item[1]) for item in completions_in_week}
+    )
+    completed_set = {(comp.task_id, comp.completion_date) for comp in completions_in_week_qs}
 
     for task_obj in user_tasks:
-        occurrences = task_obj.get_occurrences(week_start, week_end)
+        occurrences = task_obj.get_occurrences(week_start, week_end) # Will return naive datetimes
         for occ in occurrences:
-            start_datetime = occ['datetime']
-            end_datetime = None
+            start_datetime_naive = occ['datetime'] # This is NAIVE
+            
+            end_datetime_naive = None
             if task_obj.time_of_day:
-                default_end_datetime = start_datetime + timedelta(minutes=30)
+                default_end_dt_naive = start_datetime_naive + timedelta(minutes=30)
                 if task_obj.end_time_of_day:
-                    combined_end = datetime.combine(occ['date'], task_obj.end_time_of_day)
+                    end_time_naive_combined = datetime.combine(occ['date'], task_obj.end_time_of_day)
                     if task_obj.end_time_of_day < task_obj.time_of_day:
-                        combined_end_datetime_obj = timezone.make_aware(combined_end, start_datetime.tzinfo) + timedelta(days=1)
-                    else:
-                        combined_end_datetime_obj = timezone.make_aware(combined_end, start_datetime.tzinfo)
+                        end_time_naive_combined += timedelta(days=1)
                     
-                    if combined_end_datetime_obj > start_datetime:
-                        end_datetime = combined_end_datetime_obj
+                    if end_time_naive_combined > start_datetime_naive:
+                        end_datetime_naive = end_time_naive_combined
                     else:
-                        end_datetime = default_end_datetime
+                        end_datetime_naive = default_end_dt_naive
                 else:
-                    end_datetime = default_end_datetime
+                    end_datetime_naive = default_end_dt_naive
             
             is_completed = (task_obj.id, occ['date']) in completed_set
-            
-            task_color = task_obj.color
-            if not task_color:
-                if DEFAULT_TASK_COLORS:
-                     task_color = DEFAULT_TASK_COLORS[task_obj.id % len(DEFAULT_TASK_COLORS)]
-                else:
-                    task_color = '#2d5a3d'
+            task_color = task_obj.color or (DEFAULT_TASK_COLORS[task_obj.id % len(DEFAULT_TASK_COLORS)] if DEFAULT_TASK_COLORS else '#2d5a3d')
 
-            task_occurrences.append({
+            items_for_calendar.append({
                 'id': task_obj.id,
                 'occurrence_date': occ['date'].isoformat(),
                 'title': task_obj.title,
                 'type': 'task',
                 'description': task_obj.description,
-                'start_time': start_datetime.isoformat(),
-                'end_time': end_datetime.isoformat() if end_datetime else None,
+                'start_time': start_datetime_naive.isoformat(), # Send NAIVE ISO string
+                'end_time': end_datetime_naive.isoformat() if end_datetime_naive else None, # Send NAIVE ISO string
                 'priority': task_obj.priority or 'Medium',
                 'color': task_color,
                 'completed': is_completed,
             })
     
+    # Google Calendar Events are still timezone-aware
     events = Event.objects.filter(
         user=request.user,
-        start_time__date__lte=week_end,
-        end_time__date__gte=week_start
+        start_time__lte=timezone.make_aware(datetime.combine(week_end, time.max)), 
+        end_time__gte=timezone.make_aware(datetime.combine(week_start, time.min)) 
     )
-    event_list = []
     for event in events:
-        event_list.append({
+        items_for_calendar.append({
             'id': event.id,
             'title': event.title,
             'description': event.description,
             'type': 'event',
-            'start_time': event.start_time.isoformat(),
-            'end_time': event.end_time.isoformat(),
-            'priority': 'Medium', # Events don't have priority in model, default
-            'color': '#6c757d', # Default color for events
-            'completed': False, # Events are not completable in the same way as tasks
+            'start_time': event.start_time.isoformat(), # Aware ISO string
+            'end_time': event.end_time.isoformat(), # Aware ISO string
+            'priority': 'Medium', 
+            'color': '#6c757d', 
+            'completed': False, 
         })
 
     return JsonResponse({
-        'start_date': week_start.isoformat(),
-        'end_date': week_end.isoformat(),
-        'items': task_occurrences + event_list
+        'start_date': week_start.isoformat(), 
+        'end_date': week_end.isoformat(),     
+        'items': items_for_calendar
     })
 
 @login_required
@@ -125,7 +116,7 @@ def calendar_view(request):
     user_tasks = Task.objects.filter(user=request.user)
 
     upcoming_tasks_list = []
-    sidebar_upcoming_end_date = today + timedelta(days=3) # Today + next 2 days
+    sidebar_upcoming_end_date = today + timedelta(days=3) 
     
     upcoming_completions_dict = {}
     completions_for_upcoming = TaskCompletion.objects.filter(
@@ -137,31 +128,28 @@ def calendar_view(request):
         upcoming_completions_dict[(comp.task_id, comp.completion_date)] = True
 
     for task in user_tasks:
-        sidebar_occurrences = task.get_occurrences(today, sidebar_upcoming_end_date)
+        sidebar_occurrences = task.get_occurrences(today, sidebar_upcoming_end_date) # get_occurrences returns naive datetimes
         for occ in sidebar_occurrences:
             is_completed = (task.id, occ['date']) in upcoming_completions_dict
             if not is_completed: 
                 task_color = task.color
-                if not task_color: # Assign default if no color
+                if not task_color: 
                     if DEFAULT_TASK_COLORS:
                         task_color = DEFAULT_TASK_COLORS[task.id % len(DEFAULT_TASK_COLORS)]
                     else:
-                        task_color = '#2d5a3d' # Fallback default
+                        task_color = '#2d5a3d' 
                 
                 upcoming_tasks_list.append({
                     'id': task.id,
                     'title': task.title,
                     'date': occ['date'],
-                    'time_of_day': task.time_of_day, # For display formatting
-                    'datetime': occ['datetime'], 
+                    'time_of_day': task.time_of_day, 
+                    'datetime': occ['datetime'], # This is naive datetime
                     'color': task_color
                 })
 
-    upcoming_tasks_list.sort(key=lambda x: x['datetime'])
-
+    upcoming_tasks_list.sort(key=lambda x: x['datetime']) # Sort by naive datetime
     context = {
-        # 'todays_tasks_count': ..., # Can be calculated if needed for other parts
-        # 'upcoming_tasks_count': ..., # Can be calculated if needed
         'sidebar_upcoming_tasks': upcoming_tasks_list[:5], 
     }
     return render(request, 'calendar_app/calendar.html', context)

@@ -30,6 +30,7 @@
         --time-column-width: 55px;
         --top-navbar-height: 55px;
         --left-sidebar-width: 250px;
+        --left-sidebar-width-collapsed: 60px; 
       }
 
       @import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap");
@@ -51,11 +52,26 @@
         color: white;
         display: flex;
         align-items: center;
-        padding: 0 20px;
+        padding: 0 10px 0 15px; 
         box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
         flex-shrink: 0;
         z-index: 1000;
       }
+      .sidebar-toggle-btn {
+        background: none;
+        border: none;
+        color: white;
+        font-size: 1.2rem;
+        margin-right: 10px;
+        padding: 5px 8px;
+        cursor: pointer;
+        display: none; 
+      }
+      .sidebar-toggle-btn:hover {
+        background-color: var(--secondary-brand-color);
+        border-radius: 4px;
+      }
+
       .top-navbar .brand {
         font-size: 1.4rem;
         font-weight: 600;
@@ -93,6 +109,7 @@
         display: flex;
         flex-grow: 1;
         overflow: hidden;
+        position: relative; 
       }
       .left-sidebar {
         width: var(--left-sidebar-width);
@@ -103,7 +120,26 @@
         flex-shrink: 0;
         display: flex;
         flex-direction: column;
+        transition: width 0.3s ease, transform 0.3s ease;
+        z-index: 900; 
       }
+      .left-sidebar.collapsed {
+        width: var(--left-sidebar-width-collapsed);
+        overflow: hidden; 
+      }
+      .left-sidebar.collapsed .date-display .current-month-year,
+      .left-sidebar.collapsed .left-sidebar-section h6,
+      .left-sidebar.collapsed .nav-link span, 
+      .left-sidebar.collapsed .upcoming-task-details,
+      .left-sidebar.collapsed .this-week-summary p,
+      .left-sidebar.collapsed .this-week-summary .motivation {
+        display: none;
+      }
+       .left-sidebar.collapsed .date-display .current-day-large { font-size: 1.5rem; text-align: center;}
+       .left-sidebar.collapsed .nav-link i { margin-right: 0 !important; font-size: 1.2rem;}
+       .left-sidebar.collapsed .nav-link { justify-content: center; }
+
+
       .date-display {
         text-align: left;
         margin-bottom: 15px;
@@ -155,6 +191,7 @@
       .upcoming-task-details { flex-grow: 1; }
       .upcoming-task-title { font-weight: 500; display: block; color: var(--text-color); }
       .upcoming-task-time { font-size: 0.7rem; color: var(--text-muted-color); }
+      .nav-link { display: flex; align-items: center;} 
       .nav-link.active { background-color: var(--highlight-color); color: var(--primary-brand-color) !important; font-weight: 500;}
 
       .main-calendar-content { flex-grow: 1; padding: 20px 25px; overflow-y: auto; background-color: var(--background-color); }
@@ -176,21 +213,7 @@
       .day-header .day-date { font-size: 1rem; font-weight: 600; color: var(--text-color); }
       .day-header.today .day-date, .day-header.today .day-name { color: var(--primary-brand-color); }
       .day-header.today { background-color: var(--highlight-color)33; }
-        .time-slot {
-        font-size: 0.65rem;
-        color: var(--text-muted-color);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        border-top: 1px solid var(--border-color);
-        position: relative;
-        right: -5px;
-
-        /* Added for reduced height */
-        line-height: 12;
-        padding-top: 1px;
-        padding-bottom: 2px;
-        }
+      .time-slot { font-size: 0.65rem; color: var(--text-muted-color); display: flex; align-items: center; justify-content: center; border-top: 1px solid var(--border-color); position: relative; right: -5px; }
       .time-column .time-slot:first-of-type { border-top: none; }
       .hour-slot { border-top: 1px solid #f3f5f7; }
       .day-column .hour-slot:first-of-type { border-top: none; }
@@ -242,18 +265,69 @@
       .btn-primary { background-color: var(--primary-brand-color); border-color: var(--primary-brand-color); }
       .btn-primary:hover { background-color: var(--secondary-brand-color); border-color: var(--secondary-brand-color); }
 
+      /* Mobile specific styles */
+      @media (max-width: 768px) {
+        .sidebar-toggle-btn {
+            display: inline-block; 
+        }
+        .left-sidebar {
+            position: fixed; /* Changed from absolute for better overlay behavior */
+            left: 0;
+            top: var(--top-navbar-height); /* Position below navbar */
+            height: calc(100vh - var(--top-navbar-height)); /* Full height minus navbar */
+            transform: translateX(-100%); 
+            box-shadow: 2px 0 5px rgba(0,0,0,0.1);
+        }
+        .left-sidebar.show {
+            transform: translateX(0); 
+        }
+        .top-navbar .view-switcher .btn-day-view { display: inline-flex !important; } 
+        .top-navbar .view-switcher .btn-week-view .d-none { display: none !important; } /* Hide "Week" text */
+        .top-navbar .view-switcher .btn-day-view .d-none { display: none !important; } /* Hide "Day" text */
+
+
+        .main-calendar-content {
+            padding: 15px;
+        }
+        .calendar-controls-header {
+            flex-direction: column;
+            gap: 10px;
+        }
+         .calendar-controls-header .date-nav-group {
+            width: 100%;
+            justify-content: space-between;
+        }
+        .calendar-controls-header #currentWeekRangeDisplay {
+            font-size: 1.1rem; margin: 0 5px;
+        }
+        .week-view.day-view-active .day-column:not(.current-day-view) {
+            display: none; 
+        }
+        .day-header { font-size: 0.6rem; padding: 6px 3px;}
+        .day-header .day-date { font-size: 0.9rem; }
+      }
+      .top-navbar .view-switcher .btn-day-view { display: none; } 
+
+
     </style>
     {% block head_extra %}{% endblock %}
   </head>
   <body>
     <nav class="top-navbar">
+      <button class="sidebar-toggle-btn" id="sidebarToggle"><i class="fas fa-bars"></i></button>
       <a href="{% url 'calendar:calendar_view' %}" class="brand text-white text-decoration-none"><i class="fas fa-leaf"></i> Serenity</a>
       <div class="view-switcher ms-auto"> 
         {% block view_switcher %}
         <a href="{% url 'calendar:calendar_view' %}" 
-           class="btn {% if request.resolver_match.url_name == 'calendar_view' %}active{% endif %}">
-           <i class="fas fa-calendar-week me-1"></i> Week
+           class="btn btn-week-view {% if request.resolver_match.url_name == 'calendar_view' and request.GET.view != 'day' %}active{% endif %}"
+           id="weekViewBtn">
+           <i class="fas fa-calendar-week me-1"></i> <span class="d-none d-md-inline">Week</span>
         </a>
+        <button
+           class="btn btn-day-view {% if request.GET.view == 'day' %}active{% endif %}"
+           id="dayViewBtn">
+           <i class="fas fa-calendar-day me-1"></i> <span class="d-none d-md-inline">Day</span>
+        </button>
         {% endblock %}
       </div>
       <div class="actions ms-2">
@@ -269,7 +343,7 @@
       </div>
     </nav>
     <div class="app-body">
-      <aside class="left-sidebar">
+      <aside class="left-sidebar" id="leftSidebar">
         <div class="date-display">
           <span class="current-day-large" id="sidebarCurrentDay">--</span>
           <span class="current-month-year" id="sidebarCurrentMonthYear">----</span>
@@ -281,13 +355,13 @@
                 <li class="nav-item mb-1">
                     <a href="{% url 'calendar:create_task' %}" 
                        class="nav-link text-dark ps-0 {% if request.resolver_match.url_name == 'create_task' %}active{% endif %}">
-                       <i class="fas fa-plus-circle me-2 text-primary"></i>New Task
+                       <i class="fas fa-plus-circle me-2 text-primary"></i><span>New Task</span>
                     </a>
                 </li>
                 <li class="nav-item mb-1">
                     <a href="{% url 'calendar:task_statistics' %}" 
                        class="nav-link text-dark ps-0 {% if request.resolver_match.url_name == 'task_statistics' %}active{% endif %}">
-                       <i class="fas fa-chart-bar me-2 text-primary"></i>Statistics
+                       <i class="fas fa-chart-bar me-2 text-primary"></i><span>Statistics</span>
                     </a>
                 </li>
             </ul>
@@ -337,7 +411,7 @@
         {% endblock %}
       </aside>
       
-      <main class="main-calendar-content">
+      <main class="main-calendar-content" id="mainContent">
          {% if messages %}
             <div class="container-fluid p-0 mb-3"> 
                 {% for message in messages %}
@@ -351,12 +425,12 @@
         {% block content %}{% endblock %}
       </main>
     </div>
+    <div class="sidebar-overlay" id="sidebarOverlay" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.3); z-index:899;"></div>
+
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            // Sidebar date is updated by calendar.html's script via updateSidebarDateTime function.
-            // This script only handles showing/hiding calendar-specific sections.
             if (document.getElementById('calendarGrid')) { 
                  const weekSummarySection = document.getElementById('sidebar-this-week-summary-section');
                  if(weekSummarySection) weekSummarySection.style.display = 'block';
@@ -364,6 +438,54 @@
                  const weekSummarySection = document.getElementById('sidebar-this-week-summary-section');
                  if(weekSummarySection) weekSummarySection.style.display = 'none';
             }
+
+            const sidebarToggleBtn = document.getElementById('sidebarToggle');
+            const leftSidebar = document.getElementById('leftSidebar');
+            const sidebarOverlay = document.getElementById('sidebarOverlay');
+            
+            function handleSidebarToggle() {
+                if (window.innerWidth <= 768) { // Mobile behavior: slide in/out
+                    leftSidebar.classList.toggle('show');
+                    sidebarOverlay.style.display = leftSidebar.classList.contains('show') ? 'block' : 'none';
+                    if (leftSidebar.classList.contains('collapsed')) { // Ensure not in desktop collapsed state
+                        leftSidebar.classList.remove('collapsed');
+                    }
+                } else { // Desktop behavior: expand/collapse
+                    leftSidebar.classList.toggle('collapsed');
+                    if (leftSidebar.classList.contains('show')) { // Ensure not in mobile show state
+                        leftSidebar.classList.remove('show');
+                        sidebarOverlay.style.display = 'none';
+                    }
+                }
+            }
+
+            if (sidebarToggleBtn && leftSidebar) {
+                sidebarToggleBtn.addEventListener('click', handleSidebarToggle);
+            }
+
+            if (sidebarOverlay) {
+                sidebarOverlay.addEventListener('click', function() { // Only for mobile overlay
+                    if (leftSidebar.classList.contains('show')) {
+                        handleSidebarToggle(); // Use the main toggle function to close
+                    }
+                });
+            }
+            
+            // Initial sidebar state based on screen width
+            function setInitialSidebarState() {
+                if (window.innerWidth <= 768) {
+                    leftSidebar.classList.remove('collapsed'); // Not collapsed on mobile
+                    leftSidebar.classList.remove('show'); // Start hidden on mobile
+                    sidebarOverlay.style.display = 'none';
+                } else {
+                    leftSidebar.classList.remove('show'); // Not 'show' on desktop
+                    // leftSidebar.classList.add('collapsed'); // Start collapsed on desktop (optional)
+                    sidebarOverlay.style.display = 'none';
+                }
+            }
+            setInitialSidebarState();
+            window.addEventListener('resize', setInitialSidebarState); // Adjust on resize
+
         });
     </script>
     {% block scripts %}{% endblock %}
