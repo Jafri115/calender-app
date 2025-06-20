@@ -11,28 +11,30 @@ from google_auth_oauthlib.flow import Flow
 from .models import GoogleCalendarToken, Event, Task, TaskCompletion
 from .google_calendar import GoogleCalendarService
 import json
-from django.db.models import Count, Q
+from django.db.models import Count, Q, Sum, F, ExpressionWrapper, DurationField
 import markdown 
 from django.urls import reverse
 
 DEFAULT_TASK_COLORS = [
-    '#AEC6CF', 
-    '#C8E6C9', 
-    '#FFD8B1', 
-    '#F8BBD0', 
-    '#D1C4E9', 
-    '#FFF9C4', 
-    '#B2DFDB'  
+    '#AEC6CF', '#C8E6C9', '#FFD8B1', '#F8BBD0', 
+    '#D1C4E9', '#FFF9C4', '#B2DFDB'  
 ]
+
+# (Other view functions like week_data, create_task, edit_task, etc. would be here)
+# ...
 
 @login_required
 def week_data(request):
-    start_date_str = request.GET.get('start_date')
+    # FIX: Changed 'start_date' to 'date' to match the parameter sent by the frontend JavaScript.
+    date_param_str = request.GET.get('date')
     
     try:
-        if start_date_str:
-            week_start = date.fromisoformat(start_date_str)
+        if date_param_str:
+            # The date from the parameter becomes the reference point for the week.
+            ref_date = date.fromisoformat(date_param_str)
+            week_start = ref_date - timedelta(days=ref_date.weekday())
         else:
+            # If no date is provided, default to the current week.
             today = date.today()
             week_start = today - timedelta(days=today.weekday()) 
     except (ValueError, TypeError):
@@ -72,14 +74,12 @@ def week_data(request):
             
             is_completed = (task_obj.id, occ['date']) in completed_set
             
-            # --- MODIFIED: Assign default color if task has none ---
             task_color = task_obj.color
-            if not task_color: # If no color is set for the task
-                # Assign a default based on task ID to keep it consistent
-                if DEFAULT_TASK_COLORS: # Ensure the list is not empty
+            if not task_color:
+                if DEFAULT_TASK_COLORS:
                      task_color = DEFAULT_TASK_COLORS[task_obj.id % len(DEFAULT_TASK_COLORS)]
                 else:
-                    task_color = '#2d5a3d' # Fallback default if list is somehow empty
+                    task_color = '#2d5a3d'
 
             task_occurrences.append({
                 'id': task_obj.id,
@@ -90,7 +90,7 @@ def week_data(request):
                 'start_time': start_datetime.isoformat(),
                 'end_time': end_datetime.isoformat() if end_datetime else None,
                 'priority': task_obj.priority or 'Medium',
-                'color': task_color, # Use the assigned or calculated default color
+                'color': task_color,
                 'completed': is_completed,
             })
     
@@ -108,9 +108,9 @@ def week_data(request):
             'type': 'event',
             'start_time': event.start_time.isoformat(),
             'end_time': event.end_time.isoformat(),
-            'priority': 'Medium',
-            'color': '#6c757d', # Default event color
-            'completed': False,
+            'priority': 'Medium', # Events don't have priority in model, default
+            'color': '#6c757d', # Default color for events
+            'completed': False, # Events are not completable in the same way as tasks
         })
 
     return JsonResponse({
@@ -122,26 +122,192 @@ def week_data(request):
 @login_required
 def calendar_view(request):
     today = timezone.now().date()
-    # Basic summary data (can be expanded)
-    todays_tasks_count = 0
-    upcoming_tasks_count = 0
-
     user_tasks = Task.objects.filter(user=request.user)
-    next_7_days_end = today + timedelta(days=7)
+
+    upcoming_tasks_list = []
+    sidebar_upcoming_end_date = today + timedelta(days=3) # Today + next 2 days
+    
+    upcoming_completions_dict = {}
+    completions_for_upcoming = TaskCompletion.objects.filter(
+        user=request.user,
+        completion_date__gte=today,
+        completion_date__lte=sidebar_upcoming_end_date
+    )
+    for comp in completions_for_upcoming:
+        upcoming_completions_dict[(comp.task_id, comp.completion_date)] = True
 
     for task in user_tasks:
-        occurrences_today = task.get_occurrences(today, today)
-        todays_tasks_count += len(occurrences_today)
-        
-        occurrences_next_7_days = task.get_occurrences(today + timedelta(days=1), next_7_days_end)
-        upcoming_tasks_count += len(occurrences_next_7_days)
+        sidebar_occurrences = task.get_occurrences(today, sidebar_upcoming_end_date)
+        for occ in sidebar_occurrences:
+            is_completed = (task.id, occ['date']) in upcoming_completions_dict
+            if not is_completed: 
+                task_color = task.color
+                if not task_color: # Assign default if no color
+                    if DEFAULT_TASK_COLORS:
+                        task_color = DEFAULT_TASK_COLORS[task.id % len(DEFAULT_TASK_COLORS)]
+                    else:
+                        task_color = '#2d5a3d' # Fallback default
+                
+                upcoming_tasks_list.append({
+                    'id': task.id,
+                    'title': task.title,
+                    'date': occ['date'],
+                    'time_of_day': task.time_of_day, # For display formatting
+                    'datetime': occ['datetime'], 
+                    'color': task_color
+                })
+
+    upcoming_tasks_list.sort(key=lambda x: x['datetime'])
 
     context = {
-        'todays_tasks_count': todays_tasks_count,
-        'upcoming_tasks_count': upcoming_tasks_count,
+        # 'todays_tasks_count': ..., # Can be calculated if needed for other parts
+        # 'upcoming_tasks_count': ..., # Can be calculated if needed
+        'sidebar_upcoming_tasks': upcoming_tasks_list[:5], 
     }
     return render(request, 'calendar_app/calendar.html', context)
 
+
+def get_week_start_end(ref_date):
+    # Assuming Monday is the start of the week (weekday() == 0)
+    start_of_week = ref_date - timedelta(days=ref_date.weekday())
+    end_of_week = start_of_week + timedelta(days=6)
+    return start_of_week, end_of_week
+
+@login_required
+def task_statistics(request):
+    user = request.user
+    today = timezone.now().date()
+
+    current_week_start, current_week_end = get_week_start_end(today)
+    tasks = Task.objects.filter(user=user)
+    
+    current_week_completions_dates = {}
+    completions_this_week_qs = TaskCompletion.objects.filter(
+        user=user, 
+        completion_date__gte=current_week_start,
+        completion_date__lte=current_week_end
+    )
+    for comp in completions_this_week_qs:
+        current_week_completions_dates[(comp.task_id, comp.completion_date)] = True
+
+    total_duration_completed_this_week = timedelta(0)
+    total_occurrences_this_week = 0
+    completed_occurrences_this_week = 0
+
+    daily_breakdown_data = {} 
+    for i in range(7):
+        day_in_week = current_week_start + timedelta(days=i)
+        daily_breakdown_data[day_in_week] = {'total': 0, 'completed': 0, 'duration': timedelta(0)}
+
+    practice_categories_data = {}
+
+    for task in tasks:
+        occurrences = task.get_occurrences(current_week_start, current_week_end)
+        task_category_title = task.title 
+        if task_category_title not in practice_categories_data:
+            practice_categories_data[task_category_title] = {
+                'total': 0, 'completed': 0, 'duration': timedelta(0), 
+                'color': task.color or DEFAULT_TASK_COLORS[task.id % len(DEFAULT_TASK_COLORS)] if DEFAULT_TASK_COLORS else '#AEC6CF'
+            }
+
+        for occ in occurrences:
+            occurrence_date = occ['date']
+            total_occurrences_this_week += 1
+            if occurrence_date in daily_breakdown_data:
+                daily_breakdown_data[occurrence_date]['total'] += 1
+            practice_categories_data[task_category_title]['total'] += 1
+            
+            is_completed = (task.id, occurrence_date) in current_week_completions_dates
+            
+            duration = timedelta(minutes=30) 
+            if task.time_of_day and task.end_time_of_day:
+                start_dt = datetime.combine(datetime.min, task.time_of_day) # Use datetime.min as a dummy date
+                end_dt = datetime.combine(datetime.min, task.end_time_of_day)
+                if end_dt > start_dt:
+                    duration = end_dt - start_dt
+                elif task.end_time_of_day < task.time_of_day : 
+                     duration = (datetime.combine(datetime.min + timedelta(days=1), task.end_time_of_day) - start_dt)
+
+            if is_completed:
+                completed_occurrences_this_week += 1
+                total_duration_completed_this_week += duration
+                if occurrence_date in daily_breakdown_data:
+                    daily_breakdown_data[occurrence_date]['completed'] += 1
+                    daily_breakdown_data[occurrence_date]['duration'] += duration
+                practice_categories_data[task_category_title]['completed'] += 1
+                practice_categories_data[task_category_title]['duration'] += duration
+
+    # Post-process to add hours and minutes
+    for day_date_key in daily_breakdown_data:
+        duration_obj = daily_breakdown_data[day_date_key]['duration']
+        total_seconds = duration_obj.total_seconds()
+        daily_breakdown_data[day_date_key]['hours'] = int(total_seconds // 3600)
+        daily_breakdown_data[day_date_key]['minutes'] = int((total_seconds % 3600) // 60)
+
+    for cat_key in practice_categories_data:
+        duration_obj = practice_categories_data[cat_key]['duration']
+        total_seconds = duration_obj.total_seconds()
+        practice_categories_data[cat_key]['hours'] = int(total_seconds // 3600)
+        practice_categories_data[cat_key]['minutes'] = int((total_seconds % 3600) // 60)
+
+    completion_rate_current_week = (completed_occurrences_this_week / total_occurrences_this_week * 100) if total_occurrences_this_week > 0 else 0
+    avg_daily_practice_time_this_week = (total_duration_completed_this_week / 7) if completed_occurrences_this_week > 0 else timedelta(0)
+    
+    avg_daily_total_seconds = avg_daily_practice_time_this_week.total_seconds()
+    avg_daily_hours = int(avg_daily_total_seconds // 3600)
+    avg_daily_minutes = int((avg_daily_total_seconds % 3600) // 60)
+
+    last_week_start, last_week_end = get_week_start_end(today - timedelta(days=7))
+    completed_occurrences_last_week = 0
+    total_occurrences_last_week = 0
+    for task in tasks:
+        occurrences = task.get_occurrences(last_week_start, last_week_end)
+        for occ in occurrences:
+            total_occurrences_last_week +=1
+            if TaskCompletion.objects.filter(user=user, task=task, completion_date=occ['date']).exists():
+                completed_occurrences_last_week +=1
+    
+    completion_rate_last_week = (completed_occurrences_last_week / total_occurrences_last_week * 100) if total_occurrences_last_week > 0 else 0
+    weekly_trend_vs_last = completion_rate_current_week - completion_rate_last_week
+
+    four_week_trend_data = []
+    for i in range(3, -1, -1): 
+        week_ref_date = today - timedelta(weeks=i)
+        w_start, w_end = get_week_start_end(week_ref_date)
+        
+        w_completed = 0
+        w_total = 0
+        for task_item in tasks:
+            w_occurrences = task_item.get_occurrences(w_start, w_end)
+            for occ_item in w_occurrences:
+                w_total += 1
+                if TaskCompletion.objects.filter(user=user, task=task_item, completion_date=occ_item['date']).exists():
+                    w_completed +=1
+        
+        w_rate = (w_completed / w_total * 100) if w_total > 0 else 0
+        four_week_trend_data.append({
+            'week_label': w_start.strftime('%b %d'),
+            'rate': round(w_rate, 1)
+        })
+
+    sorted_daily_breakdown = sorted(daily_breakdown_data.items())
+
+    context = {
+        'current_week_label': f"{current_week_start.strftime('%B %d')} - {current_week_end.strftime('%d, %Y')}",
+        'completion_rate_current_week': round(completion_rate_current_week,1),
+        'completed_this_week_count': completed_occurrences_this_week,
+        'total_this_week_count': total_occurrences_this_week,
+        'avg_daily_practice_time_hours': avg_daily_hours,
+        'avg_daily_practice_time_minutes': avg_daily_minutes,
+        'total_practices_this_week': total_occurrences_this_week,
+        'weekly_trend_vs_last': round(weekly_trend_vs_last,1),
+        
+        'daily_breakdown': sorted_daily_breakdown,
+        'practice_categories': practice_categories_data,
+        'four_week_trend_labels': json.dumps([d['week_label'] for d in four_week_trend_data]),
+        'four_week_trend_rates': json.dumps([d['rate'] for d in four_week_trend_data]),
+    }
+    return render(request, 'calendar_app/task_statistics.html', context)
 
 @login_required
 def create_task(request):
@@ -153,12 +319,12 @@ def create_task(request):
         task.description = form_data.get('description','')
         task.frequency = form_data.get('frequency', 'once')
         task.priority = form_data.get('priority', 'Medium')
-        task.color = form_data.get('color', '#2d5a3d')
+        task.color = form_data.get('color', '#AEC6CF') # Default from palette
 
         start_date_str = form_data.get('start_date')
         if start_date_str:
             task.start_date = date.fromisoformat(start_date_str)
-        else: # Default to today if not provided, crucial for 'once' tasks if UI allows empty
+        else: 
             task.start_date = timezone.now().date()
 
         time_of_day_str = form_data.get('time_of_day')
@@ -181,15 +347,14 @@ def create_task(request):
         return redirect('calendar:calendar_view')
 
     initial_data = {}
-    datetime_param = request.GET.get('datetime') # Expected format 'YYYY-MM-DDTHH:MM'
+    datetime_param = request.GET.get('datetime') 
     if datetime_param:
         try:
             dt_obj = datetime.fromisoformat(datetime_param)
             initial_data['start_date'] = dt_obj.date().isoformat()
-            # Ensure time_of_day is in 'HH:MM' format string for the input value
             initial_data['time_of_day'] = dt_obj.time().strftime('%H:%M') 
         except ValueError:
-            pass # Ignore if param is malformed
+            pass 
 
     context = {
         'frequencies': Task.FREQUENCY_CHOICES,
@@ -198,38 +363,7 @@ def create_task(request):
         'initial_data': initial_data
     }
     return render(request, 'calendar_app/create_task.html', context)
-# calendar_app/views.py
-# ... (imports) ...
 
-@login_required
-def task_description_page(request, pk):
-    task = get_object_or_404(Task, pk=pk, user=request.user)
-    html_description = markdown.markdown(task.description or "")
-    
-    # Get a potential return date (e.g., task's start date or a query param)
-    # For simplicity, let's just make the back button go to the main calendar.
-    # A more advanced way would be to pass the original calendar week's start_date.
-    # referer = request.META.get('HTTP_REFERER') # Could use this but it's not always reliable
-    
-    context = {
-        'item_title': task.title,
-        'html_description': html_description,
-        'item_type': 'Task',
-        'back_url': reverse('calendar:calendar_view') # Simple back to main calendar
-    }
-    return render(request, 'calendar_app/full_description.html', context)
-
-@login_required
-def event_description_page(request, pk):
-    event = get_object_or_404(Event, pk=pk, user=request.user)
-    html_description = markdown.markdown(event.description or "")
-    context = {
-        'item_title': event.title,
-        'html_description': html_description,
-        'item_type': 'Event',
-        'back_url': reverse('calendar:calendar_view') # Simple back to main calendar
-    }
-    return render(request, 'calendar_app/full_description.html', context)
 @login_required
 def edit_task(request, task_id):
     task = get_object_or_404(Task, id=task_id, user=request.user)
@@ -239,7 +373,7 @@ def edit_task(request, task_id):
         task.description = form_data.get('description', '')
         task.frequency = form_data.get('frequency')
         task.priority = form_data.get('priority', 'Medium')
-        task.color = form_data.get('color', '#2d5a3d')
+        task.color = form_data.get('color', '#AEC6CF')
 
         start_date_str = form_data.get('start_date')
         task.start_date = date.fromisoformat(start_date_str) if start_date_str else None
@@ -272,13 +406,12 @@ def edit_task(request, task_id):
 
 @login_required
 @require_http_methods(["POST"])
-@csrf_exempt # Ensure CSRF is handled appropriately if not using session auth for API parts
+@csrf_exempt 
 def complete_task_on_date(request, task_id):
-    # This task_id is the main Task ID, not an occurrence ID
     task = get_object_or_404(Task, id=task_id, user=request.user)
     try:
         data = json.loads(request.body)
-        completion_date_str = data.get('date') # This should be the specific date of the occurrence
+        completion_date_str = data.get('date') 
         if not completion_date_str:
             return JsonResponse({'success': False, 'error': 'Date not provided'}, status=400)
             
@@ -303,48 +436,15 @@ def complete_task_on_date(request, task_id):
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
 
-
-@login_required
-def task_statistics(request):
-    user = request.user
-    total_completed_count = TaskCompletion.objects.filter(user=user).count()
-
-    tasks_completion_counts = Task.objects.filter(user=user).annotate(
-        # Use Q directly now, not models.Q
-        num_completions=Count('taskcompletion', filter=Q(taskcompletion__user=user))
-    ).order_by('-num_completions')
-
-    # Example: completions in the last 7 days
-    last_week_start = timezone.now().date() - timedelta(days=7)
-    completions_last_week = TaskCompletion.objects.filter(
-        user=user, 
-        completion_date__gte=last_week_start
-    ).count()
-
-    context = {
-        'total_completed_count': total_completed_count,
-        'tasks_completion_counts': tasks_completion_counts,
-        'completions_last_week': completions_last_week,
-    }
-    return render(request, 'calendar_app/task_statistics.html', context)
-
-# ... (keep other views like google_auth, sync_events, delete_task, task_detail, etc.)
-# Minor adjustment for task_detail if needed, but it seems it's not used by current modal
 @login_required
 def delete_task(request, task_id):
     task = get_object_or_404(Task, id=task_id, user=request.user)
-    if request.method == 'POST': # Should be POST for delete
+    if request.method == 'POST': 
         task_title = task.title
         task.delete()
         messages.success(request, f'Task "{task_title}" has been deleted.')
         return redirect('calendar:calendar_view')
-    # It's better to have a confirmation page or use a POST request from JS.
-    # For now, let's assume it's linked from edit page and a GET for delete confirmation is ok.
-    # If using POST from a button in a list:
-    # task.delete()
-    # messages.success(request, f'Task "{task_title}" deleted.')
-    # return redirect('calendar:calendar_view')
-    return render(request, 'calendar_app/delete_task_confirm.html', {'task': task}) # Make sure this template exists
+    return render(request, 'calendar_app/delete_task_confirm.html', {'task': task})
 
 @login_required
 @require_http_methods(["POST"])
@@ -356,15 +456,43 @@ def sync_task_to_google(request, task_id):
         messages.success(request, message_text)
     else:
         messages.warning(request, message_text)
-    return redirect('calendar:edit_task', task_id=task.id) # Redirect back to edit page
+    return redirect('calendar:edit_task', task_id=task.id)
 
+@login_required
+def task_description_page(request, pk):
+    task = get_object_or_404(Task, pk=pk, user=request.user)
+    raw_description = task.description or ""
+    html_description = markdown.markdown(raw_description)
+    has_content = bool(raw_description.strip()) 
+    
+    context = {
+        'item_title': task.title,
+        'html_description': html_description,
+        'has_content': has_content,
+        'item_type': 'Task',
+        'back_url': reverse('calendar:calendar_view') 
+    }
+    return render(request, 'calendar_app/full_description.html', context)
 
-# ... (rest of the views: google_auth, google_oauth_callback, create_event, sync_events)
-# Ensure they are present and correct based on previous state if not listed for modification here.
-# For example:
+@login_required
+def event_description_page(request, pk):
+    event = get_object_or_404(Event, pk=pk, user=request.user)
+    raw_description = event.description or ""
+    html_description = markdown.markdown(raw_description)
+    has_content = bool(raw_description.strip())
+
+    context = {
+        'item_title': event.title,
+        'html_description': html_description,
+        'has_content': has_content,
+        'item_type': 'Event',
+        'back_url': reverse('calendar:calendar_view')
+    }
+    return render(request, 'calendar_app/full_description.html', context)
+
+# --- Google Calendar OAuth and Event Sync Views ---
 @login_required
 def sync_events(request):
-    """Sync events from Google Calendar"""
     try:
         calendar_service = GoogleCalendarService(request.user)
         events = calendar_service.get_events()
@@ -374,34 +502,30 @@ def sync_events(request):
     return redirect('calendar:calendar_view')
 
 def google_auth(request):
-    """Initialize Google OAuth flow"""
     client_config = {
         "web": {
             "client_id": settings.GOOGLE_OAUTH2_CLIENT_ID,
             "client_secret": settings.GOOGLE_OAUTH2_CLIENT_SECRET,
             "auth_uri": "https://accounts.google.com/o/oauth2/auth",
             "token_uri": "https://oauth2.googleapis.com/token",
-            "redirect_uris": [request.build_absolute_uri(redirect('calendar:oauth_callback').url)]
+            "redirect_uris": [request.build_absolute_uri(reverse('calendar:oauth_callback'))]
         }
     }
     flow = Flow.from_client_config(
         client_config,
         scopes=['https://www.googleapis.com/auth/calendar'],
-        # Make sure your redirect URI here matches what's in Google Cloud Console
-        redirect_uri=request.build_absolute_uri(redirect('calendar:oauth_callback').url)
+        redirect_uri=request.build_absolute_uri(reverse('calendar:oauth_callback'))
     )
-    # flow.redirect_uri = request.build_absolute_uri(redirect('calendar:oauth_callback').url) # Duplicate
-    authorization_url, state = flow.authorization_url(access_type='offline', include_granted_scopes='true', prompt='consent') # Added prompt='consent' for refresh token
+    authorization_url, state = flow.authorization_url(access_type='offline', include_granted_scopes='true', prompt='consent')
     request.session['google_auth_state'] = state
     return redirect(authorization_url)
 
-@login_required # Ensure user is logged in for callback
+@login_required 
 def google_oauth_callback(request):
     state = request.session.pop('google_auth_state', '')
-    # Check if state matches to prevent CSRF
     if not state or state != request.GET.get('state'):
         messages.error(request, "State mismatch. OAuth2 flow could not be completed.")
-        return redirect('calendar:calendar_view') # Or an error page
+        return redirect('calendar:calendar_view')
 
     client_config = {
         "web": {
@@ -415,26 +539,20 @@ def google_oauth_callback(request):
         client_config, 
         scopes=['https://www.googleapis.com/auth/calendar'], 
         state=state,
-        redirect_uri=request.build_absolute_uri(redirect('calendar:oauth_callback').url)
+        redirect_uri=request.build_absolute_uri(reverse('calendar:oauth_callback'))
     )
     
-    # Use the full URL for `authorization_response`
     authorization_response = request.build_absolute_uri()
     flow.fetch_token(authorization_response=authorization_response)
     
     credentials = flow.credentials
-    # expires_at: Google's library typically returns expiry as a datetime object or seconds.
-    # Assuming credentials.expiry is a timezone-aware datetime object (UTC).
-    # If it's seconds, you'll need timezone.now() + timedelta(seconds=credentials.expires_in)
-    
     expires_at_datetime = timezone.now() + timedelta(seconds=credentials.expires_in) if credentials.expires_in else None
-
 
     GoogleCalendarToken.objects.update_or_create(
         user=request.user,
         defaults={
             'access_token': credentials.token,
-            'refresh_token': credentials.refresh_token, # This is crucial
+            'refresh_token': credentials.refresh_token,
             'token_expires_at': expires_at_datetime,
         }
     )
@@ -442,10 +560,7 @@ def google_oauth_callback(request):
     return redirect('calendar:calendar_view')
 
 @login_required
-def create_event(request): # This is for Google Calendar Events, not local tasks.
-    # Assuming this creates events directly in Google Calendar and syncs back.
-    # The existing EventForm in forms.py might be for this.
-    # Let's assume the current simple POST handling is what was intended for direct creation.
+def create_event(request): 
     if request.method == 'POST':
         try:
             calendar_service = GoogleCalendarService(request.user)
@@ -454,12 +569,15 @@ def create_event(request): # This is for Google Calendar Events, not local tasks
 
             if not start_dt_str or not end_dt_str:
                 messages.error(request, "Start time and end time are required.")
-                return render(request, 'calendar_app/create_event.html') # Or redirect
+                return render(request, 'calendar_app/create_event.html') 
 
-            # Ensure parsing with timezone if not already part of string
-            start_dt = timezone.make_aware(datetime.fromisoformat(start_dt_str)) if len(start_dt_str) == 16 else datetime.fromisoformat(start_dt_str)
-            end_dt = timezone.make_aware(datetime.fromisoformat(end_dt_str)) if len(end_dt_str) == 16 else datetime.fromisoformat(end_dt_str)
-
+            # Attempt to parse datetime-local input, which doesn't include timezone
+            # Make them timezone-aware using Django's current timezone
+            start_dt_naive = datetime.fromisoformat(start_dt_str)
+            end_dt_naive = datetime.fromisoformat(end_dt_str)
+            
+            start_dt = timezone.make_aware(start_dt_naive)
+            end_dt = timezone.make_aware(end_dt_naive)
 
             calendar_service.create_event(
                 title=request.POST.get('title'),
@@ -472,7 +590,6 @@ def create_event(request): # This is for Google Calendar Events, not local tasks
             return redirect('calendar:calendar_view')
         except Exception as e:
             messages.error(request, f"Could not create event: {e}")
-            # Consider passing form back with errors if using Django forms
-            return render(request, 'calendar_app/create_event.html') # Redirecting might lose POST data
+            return render(request, 'calendar_app/create_event.html') 
             
-    return render(request, 'calendar_app/create_event.html') # Assumes this template exists
+    return render(request, 'calendar_app/create_event.html')

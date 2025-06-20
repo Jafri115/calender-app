@@ -1,59 +1,123 @@
-{% extends 'base.html' %} {# Or your app's base template #}
+{% extends 'base.html' %} 
 
-{% block title %}{{ item_type }} Description: {{ item_title }}{% endblock %}
+{% block title %}{{ item_type }} Description: {{ item_title|truncatechars:50 }}{% endblock %}
 
 {% block head_extra %}
 <style>
-    /* ... (styles from previous full_description.html version) ... */
-    .description-container {
+    .description-page-container {
+        padding: 20px 25px; /* Match main-calendar-content padding */
+        overflow-y: auto;
+        flex-grow: 1;
+    }
+    .description-card {
         background-color: #fff;
         padding: 2rem;
         border-radius: 8px;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-        margin-top: 2rem;
-        max-width: 900px; 
-        margin-left: auto;
-        margin-right: auto;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        margin-top: 1rem; /* Reduced top margin */
     }
     .description-content h1, .description-content h2, .description-content h3,
     .description-content h4, .description-content h5, .description-content h6 {
-        color: var(--islamic-green, #2d5a3d); 
+        color: var(--primary-brand-color); 
         margin-top: 1.5em;
         margin-bottom: 0.5em;
+        font-weight: 600;
     }
-    /* ... (include all other necessary styles for markdown content here) ... */
-    .back-link {
+    .description-content h1 { font-size: 1.8rem; }
+    .description-content h2 { font-size: 1.5rem; }
+    .description-content h3 { font-size: 1.3rem; }
+    .description-content p { line-height: 1.7; margin-bottom: 1rem; }
+    .description-content ul, .description-content ol { padding-left: 2rem; margin-bottom: 1rem; }
+    .description-content li { margin-bottom: 0.5rem; }
+    .description-content blockquote {
+        border-left: 4px solid var(--highlight-color);
+        padding-left: 1rem;
+        margin-left: 0;
+        font-style: italic;
+        color: #555;
+    }
+    .description-content pre {
+        background-color: #f8f9fa;
+        padding: 1rem;
+        border-radius: 5px;
+        overflow-x: auto;
+        border: 1px solid var(--border-color);
+    }
+    .description-content code {
+        font-family: 'Courier New', Courier, monospace;
+        background-color: #e9ecef;
+        padding: 0.2em 0.4em;
+        border-radius: 3px;
+        font-size: 0.9em;
+    }
+    .description-content pre code {
+        background-color: transparent;
+        padding: 0;
+        font-size: 0.85em;
+    }
+    .description-content table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 1rem;
+    }
+    .description-content th, .description-content td {
+        border: 1px solid var(--border-color);
+        padding: 0.75rem;
+        text-align: left;
+    }
+    .description-content th {
+        background-color: #f8f9fa;
+    }
+    .back-link-full-desc { /* Renamed to avoid conflicts */
         display: inline-block;
-        margin-bottom: 1.5rem;
-        color: var(--islamic-green, #2d5a3d);
+        margin-bottom: 1rem; /* Spacing from the card */
+        color: var(--primary-brand-color);
         text-decoration: none;
         font-size: 0.9rem;
         padding: 0.5rem 1rem;
-        border: 1px solid var(--islamic-green, #2d5a3d);
+        border: 1px solid var(--primary-brand-color);
         border-radius: 5px;
         transition: background-color 0.2s, color 0.2s;
     }
-    .back-link:hover {
+    .back-link-full-desc:hover {
         text-decoration: none;
-        background-color: var(--islamic-green, #2d5a3d);
+        background-color: var(--primary-brand-color);
         color: white;
+    }
+    .page-title-full-desc { /* Renamed */
+        font-size: 1.75rem;
+        font-weight: 600;
+        color: var(--primary-brand-color);
+        margin-bottom: 0.5rem;
+    }
+    .item-type-badge {
+        font-size: 0.8rem;
+        padding: 0.3em 0.6em;
     }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="container mt-4">
-    <!-- MODIFIED Back Link -->
-    <a href="{{ back_url }}" class="back-link">
-        <i class="fas fa-arrow-left me-2"></i>Back to Calendar
+<div class="description-page-container">
+    <a href="{{ back_url|default:request.META.HTTP_REFERER|default:'/' }}" class="back-link-full-desc">
+        <i class="fas fa-arrow-left me-2"></i>Back
     </a>
     
-    <div class="description-container">
-        <h2 class="mb-3">{{ item_type }} Details: {{ item_title }}</h2>
-        <hr>
+    <div class="description-card">
+        <div class="d-flex justify-content-between align-items-start mb-3">
+            <div>
+                <span class="badge {% if item_type == 'Task' %}bg-success{% else %}bg-info{% endif %} item-type-badge mb-2">{{ item_type }}</span>
+                <h1 class="page-title-full-desc">{{ item_title }}</h1>
+            </div>
+        </div>
+        <hr class="mb-4">
         <div class="description-content mt-3">
             {% autoescape off %}
-                {{ html_description|safe }}
+                {% if has_content %} {# MODIFIED HERE #}
+                    {{ html_description|safe }}
+                {% else %}
+                    <p class="text-muted fst-italic">No description provided for this {{ item_type|lower }}.</p>
+                {% endif %}
             {% endautoescape %}
         </div>
     </div>

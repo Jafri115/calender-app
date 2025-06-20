@@ -1,13 +1,13 @@
 {% extends 'base.html' %}
 
-{% block title %}Create Task - Django Calendar{% endblock %}
+{% block title %}Create Task - Serenity Calendar{% endblock %}
 
 {% block content %}
-<div class="container mt-4">
+<div class="container mt-4 page-content-container">
     <div class="row justify-content-center">
         <div class="col-md-8">
             <div class="card shadow-sm">
-                <div class="card-header bg-primary text-white">
+                <div class="card-header">
                     <h3 class="mb-0"><i class="fas fa-tasks me-2"></i>Create New Task</h3>
                 </div>
                 <div class="card-body">
@@ -108,7 +108,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const recurringOptionsDiv = document.getElementById('recurring-options');
     const weekdayWrapper = document.getElementById('weekday-wrapper');
 
-    function toggleRecurringFields() { /* ... Same as before ... */
+    function toggleRecurringFields() {
         const freq = frequencySelect.value;
         if (freq === 'daily' || freq === 'weekly') {
             recurringOptionsDiv.style.display = 'block';
@@ -122,24 +122,25 @@ document.addEventListener('DOMContentLoaded', function() {
                 document.getElementById('weekday').required = false;
                 document.getElementById('weekday').disabled = true;
             }
-        } else {
+        } else { // 'once'
             recurringOptionsDiv.style.display = 'none';
             weekdayWrapper.style.display = 'none';
             document.getElementById('weekday').required = false;
             document.getElementById('weekday').disabled = true;
             document.getElementById('recurring_end_date').disabled = true;
-            document.getElementById('recurring_end_date').value = '';
-            document.getElementById('weekday').value = '';
+            // Clear values when hiding if needed, or leave them for re-selection
+            // document.getElementById('recurring_end_date').value = '';
+            // document.getElementById('weekday').value = ''; 
         }
     }
     frequencySelect.addEventListener('change', toggleRecurringFields);
-    toggleRecurringFields();
+    toggleRecurringFields(); // Initial call to set state
 
     const urlParams = new URLSearchParams(window.location.search);
     const datetimeParam = urlParams.get('datetime');
     if (datetimeParam) {
         try {
-            const dt = new Date(datetimeParam);
+            const dt = new Date(datetimeParam); // Assumes ISO format like 2023-10-26T14:00
             document.getElementById('start_date').value = dt.toISOString().split('T')[0];
             const hours = String(dt.getHours()).padStart(2, '0');
             const minutes = String(dt.getMinutes()).padStart(2, '0');
@@ -150,7 +151,10 @@ document.addEventListener('DOMContentLoaded', function() {
     // --- Add Color Palette ---
     const colorInput = document.getElementById('color');
     const colorPaletteContainer = document.getElementById('color-palette');
-    const pastelColors = ['#AEC6CF', '#C8E6C9', '#FFD8B1', '#F8BBD0', '#D1C4E9', '#FFF9C4', '#B2DFDB', '#FFCCBC', '#CFD8DC'];
+    const pastelColors = [
+      '#72B6CF', '#66D18A', '#FFA960', '#F06292', '#9575CD', 
+      '#FFF176', '#4DB6AC', '#FF8A65', '#90A4AE'
+    ];
 
     pastelColors.forEach(color => {
         const colorButton = document.createElement('button');
@@ -161,11 +165,11 @@ document.addEventListener('DOMContentLoaded', function() {
         colorButton.style.borderRadius = '50%';
         colorButton.style.border = '1px solid #ccc';
         colorButton.style.marginRight = '5px';
+        colorButton.style.marginBottom = '5px';
         colorButton.style.cursor = 'pointer';
-        colorButton.title = color; // Show hex on hover
+        colorButton.title = color; 
         colorButton.addEventListener('click', function() {
             colorInput.value = color;
-            // Optionally trigger change event if other JS relies on it
             colorInput.dispatchEvent(new Event('input', { bubbles: true }));
         });
         colorPaletteContainer.appendChild(colorButton);

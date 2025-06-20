@@ -21,6 +21,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'calendar_app',  # Add our calendar app
+    'django.contrib.humanize',
 ]
 
 MIDDLEWARE = [

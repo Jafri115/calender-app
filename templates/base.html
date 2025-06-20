@@ -1,67 +1,371 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}Django Calendar{% endblock %}</title>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{% block title %}Serenity Calendar{% endblock %}</title>
+    <link
+      href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+    <link
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+      rel="stylesheet"
+    />
+    <meta name="csrf-token" content="{{ csrf_token }}">
     <style>
-        .event-card {
-            border-left: 4px solid #007bff;
-            transition: transform 0.2s;
-        }
-        .event-card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-        }
-        .calendar-header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-        }
-        .sync-btn {
-            animation: rotate 2s linear infinite;
-        }
-        .sync-btn.spinning {
-            animation: rotate 1s linear infinite;
-        }
-        @keyframes rotate {
-            from { transform: rotate(0deg); }
-            to { transform: rotate(360deg); }
-        }
-    </style>
-</head>
-<body class="bg-light">
-    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
-        <div class="container">
-            <a class="navbar-brand" href="{% url 'calendar:calendar_view' %}">
-                <i class="fas fa-calendar-alt me-2"></i>Django Calendar
-            </a>
-            <div class="navbar-nav ms-auto">
-                {% if user.is_authenticated %}
-                    <span class="navbar-text me-3">Welcome, {{ user.username }}!</span>
-                    <a class="nav-link" href="{% url 'admin:logout' %}">Logout</a>
-                {% else %}
-                    <a class="nav-link" href="{% url 'admin:login' %}">Login</a>
-                {% endif %}
-            </div>
-        </div>
-    </nav>
+      :root {
+        --primary-brand-color: #4a55a2; 
+        --secondary-brand-color: #7895cb; 
+        --highlight-color: #a0bfe0;
+        --background-color: #f4f7fc; 
+        --content-background: #ffffff;
+        --text-color: #343a40;
+        --text-muted-color: #6c757d;
+        --border-color: #e9ecef; 
 
-    <main class="container mt-4">
-        {% if messages %}
-            {% for message in messages %}
-                <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
-                    {{ message }}
-                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                </div>
-            {% endfor %}
-        {% endif %}
+        --hour-slot-height-normal: 48px;
+        --day-header-height: 55px;
+        --time-column-width: 55px;
+        --top-navbar-height: 55px;
+        --left-sidebar-width: 250px;
+      }
+
+      @import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap");
+
+      body {
+        background-color: var(--background-color);
+        font-family: "Inter", sans-serif;
+        color: var(--text-color);
+        overscroll-behavior-y: contain;
+        margin: 0;
+        display: flex;
+        flex-direction: column;
+        height: 100vh;
+        overflow: hidden;
+      }
+      .top-navbar {
+        height: var(--top-navbar-height);
+        background-color: var(--primary-brand-color);
+        color: white;
+        display: flex;
+        align-items: center;
+        padding: 0 20px;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        flex-shrink: 0;
+        z-index: 1000;
+      }
+      .top-navbar .brand {
+        font-size: 1.4rem;
+        font-weight: 600;
+        margin-right: auto;
+        display: flex;
+        align-items: center;
+      }
+      .top-navbar .brand i {
+        margin-right: 10px;
+        color: var(--highlight-color);
+      }
+      .top-navbar .view-switcher button, .top-navbar .actions .btn {
+        background: none;
+        border: none;
+        color: #e0e1ff;
+        padding: 7px 10px; 
+        cursor: pointer;
+        font-size: 0.85rem;
+        border-radius: 6px;
+        margin: 0 2px; 
+        transition: background-color 0.2s;
+        display: inline-flex; 
+        align-items: center;
+      }
+      .top-navbar .view-switcher button.active,
+      .top-navbar .view-switcher button:hover,
+      .top-navbar .actions .btn:hover {
+        background-color: var(--secondary-brand-color);
+        color: white;
+      }
+      .top-navbar .actions .profile-btn { 
+        font-size: 1.3rem; padding: 7px;
+      }
+      .app-body {
+        display: flex;
+        flex-grow: 1;
+        overflow: hidden;
+      }
+      .left-sidebar {
+        width: var(--left-sidebar-width);
+        background-color: var(--content-background);
+        padding: 20px 15px;
+        border-right: 1px solid var(--border-color);
+        overflow-y: auto;
+        flex-shrink: 0;
+        display: flex;
+        flex-direction: column;
+      }
+      .date-display {
+        text-align: left;
+        margin-bottom: 15px;
+        padding-bottom: 15px;
+        border-bottom: 1px solid var(--border-color);
+      }
+      .date-display .current-day-large {
+        font-size: 2.2rem;
+        font-weight: 700;
+        color: var(--text-color);
+        display: block;
+        line-height: 1.1;
+      }
+      .date-display .current-month-year {
+        font-size: 0.85rem;
+        color: var(--text-muted-color);
+      }
+      .left-sidebar-section {
+        margin-bottom: 20px;
+      }
+      .left-sidebar-section h6 {
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        color: var(--text-muted-color);
+        margin-bottom: 12px;
+        font-weight: 600;
+        letter-spacing: 0.5px;
+      }
+      
+      .this-week-summary p { font-size: 0.8rem; margin-bottom: 6px; }
+      .this-week-summary .motivation { font-size: 0.75rem; color: var(--text-muted-color); margin-top: 8px; }
+      .progress { height: 6px; border-radius: 3px; background-color: #e9ecef; }
+      .progress-bar { background-color: var(--primary-brand-color); }
+
+      .upcoming-tasks-list { list-style: none; padding: 0; margin: 0; }
+      .upcoming-task-item {
+        display: flex;
+        align-items: flex-start;
+        padding: 8px 5px;
+        border-bottom: 1px dashed var(--border-color);
+        font-size: 0.78rem;
+        line-height: 1.3;
+      }
+      .upcoming-task-item:last-child { border-bottom: none; }
+      .upcoming-task-item .task-color-dot {
+        width: 8px; height: 8px; border-radius: 50%;
+        margin-right: 8px; margin-top: 4px; flex-shrink: 0;
+      }
+      .upcoming-task-details { flex-grow: 1; }
+      .upcoming-task-title { font-weight: 500; display: block; color: var(--text-color); }
+      .upcoming-task-time { font-size: 0.7rem; color: var(--text-muted-color); }
+      .nav-link.active { background-color: var(--highlight-color); color: var(--primary-brand-color) !important; font-weight: 500;}
+
+      .main-calendar-content { flex-grow: 1; padding: 20px 25px; overflow-y: auto; background-color: var(--background-color); }
+      .calendar-controls-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; }
+      .calendar-controls-header .date-nav-group { display: flex; align-items: center; }
+      .calendar-controls-header #currentWeekRangeDisplay { font-size: 1.3rem; font-weight: 500; color: var(--text-color); margin: 0 12px; white-space: nowrap; }
+      .calendar-controls-header .nav-arrows button { background: none; border: none; font-size: 1.1rem; color: var(--text-muted-color); cursor: pointer; padding: 5px 10px; line-height: 1; border-radius: 50%; transition: background-color 0.2s; }
+      .calendar-controls-header .nav-arrows button:hover { background-color: #e9ecef; }
+      .calendar-controls-header .actions .btn { font-size: 0.8rem; padding: 0.35rem 0.8rem; border-radius: 6px; margin-left: 10px; display: flex; align-items: center; gap: 6px; }
+      .calendar-controls-header .actions .new-practice-btn { background-color: var(--primary-brand-color); color: white; border-color: var(--primary-brand-color); }
+      .week-view { display: grid; grid-template-columns: var(--time-column-width) repeat(7, 1fr); background: var(--content-background); min-width: 650px; border: 1px solid var(--border-color); border-radius: 8px; overflow: hidden; position: relative; }
+      .time-column, .day-column { display: grid; grid-template-rows: var(--day-header-height) repeat(24,var(--hour-slot-height-normal)); }
+      .time-column { background: #fdfdff; border-right: 1px solid var(--border-color); }
+      .day-column { position: relative; }
+      .day-column:not(:last-of-type) { border-right: 1px solid var(--border-color); }
+      .time-header { height: var(--day-header-height); }
+      .day-header { padding: 8px 5px; text-align: center; font-weight: 500; border-bottom: 1px solid var(--border-color); display: flex; align-items: center; justify-content: center; flex-direction: column; height: var(--day-header-height); box-sizing: border-box; font-size: 0.65rem; text-transform: uppercase; color: var(--text-muted-color); }
+      .day-header .day-name { margin-bottom: 2px; }
+      .day-header .day-date { font-size: 1rem; font-weight: 600; color: var(--text-color); }
+      .day-header.today .day-date, .day-header.today .day-name { color: var(--primary-brand-color); }
+      .day-header.today { background-color: var(--highlight-color)33; }
+        .time-slot {
+        font-size: 0.65rem;
+        color: var(--text-muted-color);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-top: 1px solid var(--border-color);
+        position: relative;
+        right: -5px;
+
+        /* Added for reduced height */
+        line-height: 12;
+        padding-top: 1px;
+        padding-bottom: 2px;
+        }
+      .time-column .time-slot:first-of-type { border-top: none; }
+      .hour-slot { border-top: 1px solid #f3f5f7; }
+      .day-column .hour-slot:first-of-type { border-top: none; }
+      .task-item, .event-item { position: absolute; left: 4px; right: 4px; padding: 4px 6px; border-radius: 5px; font-size: 0.65rem; cursor: pointer; transition: all 0.15s ease; box-shadow: 0 1px 1.5px rgba(0,0,0,0.08); overflow: hidden; display: flex; align-items: flex-start; line-height: 1.25; z-index: 1; }
+      .task-item:hover, .event-item:hover { box-shadow: 0 2px 4px rgba(0,0,0,0.12); z-index: 2; transform: translateY(-1px); }
+      .item-type-dot { width: 7px; height: 7px; border-radius: 50%; margin-right: 5px; margin-top: 2.5px; flex-shrink: 0; }
+      .item-details-group { flex-grow: 1; display: flex; flex-direction: column; }
+      .item-title { font-weight: 500; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 0.7rem; margin-bottom: 0px; }
+      .item-time-display { font-size: 0.6rem; opacity: 0.8; }
+      .item-checkbox-placeholder { appearance: none; width: 13px; height: 13px; border: 1.2px solid #b8c0c8; border-radius: 3px; cursor: pointer; position: relative; top: 1px; margin-left: auto; flex-shrink: 0; background-color: #fff; margin-top: 1px; }
+      .item-checkbox-placeholder:checked { background-color: var(--primary-brand-color); border-color: var(--primary-brand-color); }
+      .item-checkbox-placeholder:checked::after { content: "✓"; color: white; position: absolute; left: 50%; top: 50%; transform: translate(-50%,-50%); font-size: 9px; font-weight: bold; }
+      .task-item.completed { opacity: 0.75; }
+      .task-item.completed .item-title, .task-item.completed .item-time-display { text-decoration: line-through; opacity: 0.7; }
+      .current-time-line-wrapper { position: absolute; left: var(--time-column-width); right: 0; height: 2px; z-index: 10; pointer-events: none; }
+      .current-time-line { height: 100%; background-color: #d9534f; position: relative; }
+      .current-time-line-indicator { position: absolute; width: 8px; height: 8px; border-radius: 50%; background-color: #d9534f; left: -4px; top: -3px; }
+      .modal-dialog { max-width: 700px; }
+      .modal-content { max-height: 88vh; }
+      .modal-header { background: var(--primary-brand-color); color: white; padding: 0.8rem 1.2rem; }
+      .modal-title { font-size: 1.15rem; font-weight: 500; }
+      .modal-body { padding: 1.2rem; }
+      .modal-footer { padding: 0.8rem 1.2rem; background-color: #f8f9fa; border-top: 1px solid var(--border-color); }
+      .modal-info-row { display: flex; gap: 1.5rem; margin-bottom: 1rem; align-items: center; flex-wrap: wrap; }
+      .modal-info-item { display: flex; align-items: center; gap: 0.5rem; }
+      .modal-info-item strong { font-size: 0.8rem; color: var(--text-color); font-weight: 500; }
+      .modal-info-item span, .modal-info-item .badge { font-size: 0.8rem; }
+      .description-section .d-flex h6 { font-size: 0.85rem; color: var(--text-color); margin-bottom: 0; font-weight: 600; }
+      #modalItemDescription { background: #fdfdff; border: 1px solid #e9e9e9; border-radius: 6px; padding: 0.8rem; font-size: 0.85rem; line-height: 1.5; max-height: 280px; overflow-y: auto; }
+      #modalItemDescription h1, #modalItemDescription h2, #modalItemDescription h3, #modalItemDescription h4, #modalItemDescription h5, #modalItemDescription h6 { color: var(--primary-brand-color); margin-top: 1rem; margin-bottom: 0.5rem; font-weight: 600; line-height: 1.3; font-size: 1rem; }
+      #modalItemDescription p { margin-bottom: 0.75rem; } #modalItemDescription strong { font-weight: 600; } #modalItemDescription em { font-style: italic; }
+      #modalItemDescription ul, #modalItemDescription ol { margin: 0.5rem 0; padding-left: 1.5rem; } #modalItemDescription li { margin-bottom: 0.3rem; }
+      #modalItemDescription a { color: var(--primary-brand-color); text-decoration: underline; } #modalItemDescription a:hover { color: var(--secondary-brand-color); }
+      #modalItemDescription code { background: #eef1f3; padding: 0.15rem 0.4rem; border-radius: 4px; font-family: Consolas,"Courier New",monospace; font-size: .8em; color: #c7254e; }
+      #modalItemDescription pre { background: #eef1f3; padding: .8rem; border-radius: 6px; overflow-x: auto; margin: .8rem 0; border: 1px solid #ddd; }
+      #modalItemDescription pre code { background: none; padding: 0; }
+      #modalItemDescription blockquote { margin: .8rem 0; padding: .5rem 1rem; background: #f9f9f9; border-left: 4px solid var(--highlight-color); color: #555; }
+      #modalTaskSpecifics { background: #f7f8f9; border-radius: 6px; padding: 0.8rem; margin-top: 1rem; border: 1px solid #e9e9e9; }
+      #modalTaskSpecifics .row { margin: 0; align-items: center; }
+      #modalTaskSpecifics .col-md-6 { padding: 0.3rem 0.5rem; display: flex; align-items: center; gap: 0.5rem; font-size: 0.8rem; }
+      .view-full-description-btn { font-size: 0.7rem; padding: 0.15rem 0.4rem; }
+      .btn-close-white { filter: invert(1) grayscale(100%) brightness(200%); }
+      .page-content-container { padding: 20px 25px; overflow-y: auto; flex-grow: 1; } 
+      .card { border: 1px solid var(--border-color); box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+      .card-header { background-color: var(--primary-brand-color); color: white; border-bottom: 1px solid var(--primary-brand-color); }
+      .card-header h3, .card-header h5 { margin-bottom: 0; }
+      .form-label { font-weight: 500; font-size: 0.85rem; }
+      .form-control, .form-select { font-size: 0.9rem; }
+      .btn-primary { background-color: var(--primary-brand-color); border-color: var(--primary-brand-color); }
+      .btn-primary:hover { background-color: var(--secondary-brand-color); border-color: var(--secondary-brand-color); }
+
+    </style>
+    {% block head_extra %}{% endblock %}
+  </head>
+  <body>
+    <nav class="top-navbar">
+      <a href="{% url 'calendar:calendar_view' %}" class="brand text-white text-decoration-none"><i class="fas fa-leaf"></i> Serenity</a>
+      <div class="view-switcher ms-auto"> 
+        {% block view_switcher %}
+        <a href="{% url 'calendar:calendar_view' %}" 
+           class="btn {% if request.resolver_match.url_name == 'calendar_view' %}active{% endif %}">
+           <i class="fas fa-calendar-week me-1"></i> Week
+        </a>
+        {% endblock %}
+      </div>
+      <div class="actions ms-2">
+         <a href="{% url 'calendar:task_statistics' %}" class="btn {% if request.resolver_match.url_name == 'task_statistics' %}active{% endif %}" title="Task Statistics">
+            <i class="fas fa-chart-line"></i>
+        </a>
+        <a href="{% url 'calendar:google_auth' %}" class="btn" title="Connect Google Calendar">
+            <i class="fab fa-google"></i>
+        </a>
+         <a href="{% url 'calendar:sync_gcal_events' %}" class="btn" title="Sync Google Calendar Events">
+            <i class="fas fa-sync-alt"></i>
+        </a>
+      </div>
+    </nav>
+    <div class="app-body">
+      <aside class="left-sidebar">
+        <div class="date-display">
+          <span class="current-day-large" id="sidebarCurrentDay">--</span>
+          <span class="current-month-year" id="sidebarCurrentMonthYear">----</span>
+        </div>
+        <hr />
+        <div class="left-sidebar-section">
+            <h6>Navigation</h6>
+            <ul class="nav flex-column">
+                <li class="nav-item mb-1">
+                    <a href="{% url 'calendar:create_task' %}" 
+                       class="nav-link text-dark ps-0 {% if request.resolver_match.url_name == 'create_task' %}active{% endif %}">
+                       <i class="fas fa-plus-circle me-2 text-primary"></i>New Task
+                    </a>
+                </li>
+                <li class="nav-item mb-1">
+                    <a href="{% url 'calendar:task_statistics' %}" 
+                       class="nav-link text-dark ps-0 {% if request.resolver_match.url_name == 'task_statistics' %}active{% endif %}">
+                       <i class="fas fa-chart-bar me-2 text-primary"></i>Statistics
+                    </a>
+                </li>
+            </ul>
+        </div>
+        <hr />
+        {% block sidebar_extra %}
+        <div class="left-sidebar-section" id="sidebar-upcoming-tasks-section">
+            <h6>Upcoming Tasks</h6>
+            <ul class="upcoming-tasks-list" id="upcomingTasksListSidebar">
+                {% if sidebar_upcoming_tasks %}
+                    {% for task in sidebar_upcoming_tasks %}
+                    <li class="upcoming-task-item">
+                        <span class="task-color-dot" style="background-color: {{ task.color }};"></span>
+                        <div class="upcoming-task-details">
+                            <a href="{% url 'calendar:edit_task' task.id %}" class="upcoming-task-title text-decoration-none">{{ task.title }}</a>
+                            <span class="upcoming-task-time">
+                                {{ task.date|date:"D, M j" }}
+                                {% if task.time_of_day %} - {{ task.time_of_day|time:"g:i A" }}{% endif %}
+                            </span>
+                        </div>
+                    </li>
+                    {% endfor %}
+                {% else %}
+                    <li class="text-muted small">No upcoming tasks.</li>
+                {% endif %}
+            </ul>
+        </div>
         
+        <div class="left-sidebar-section this-week-summary" id="sidebar-this-week-summary-section" style="display:none;">
+          <h6>This Week</h6>
+          <p>
+            Completed: <span id="sidebarCompletedCount">0</span>/<span id="sidebarTotalCount">0</span>
+          </p>
+          <div class="progress" style="height: 6px; margin: 8px 0">
+            <div
+              id="sidebarProgress"
+              class="progress-bar"
+              role="progressbar"
+              style="width: 0%"
+              aria-valuenow="0"
+              aria-valuemin="0"
+              aria-valuemax="100"
+            ></div>
+          </div>
+          <p class="motivation">Keep up the beautiful practice! 🌱</p>
+        </div>
+        {% endblock %}
+      </aside>
+      
+      <main class="main-calendar-content">
+         {% if messages %}
+            <div class="container-fluid p-0 mb-3"> 
+                {% for message in messages %}
+                <div class="alert alert-{{ message.tags }} alert-dismissible fade show mb-2" role="alert"> 
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+                {% endfor %}
+            </div>
+        {% endif %}
         {% block content %}{% endblock %}
-    </main>
+      </main>
+    </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Sidebar date is updated by calendar.html's script via updateSidebarDateTime function.
+            // This script only handles showing/hiding calendar-specific sections.
+            if (document.getElementById('calendarGrid')) { 
+                 const weekSummarySection = document.getElementById('sidebar-this-week-summary-section');
+                 if(weekSummarySection) weekSummarySection.style.display = 'block';
+            } else { 
+                 const weekSummarySection = document.getElementById('sidebar-this-week-summary-section');
+                 if(weekSummarySection) weekSummarySection.style.display = 'none';
+            }
+        });
+    </script>
     {% block scripts %}{% endblock %}
-</body>
+  </body>
 </html>

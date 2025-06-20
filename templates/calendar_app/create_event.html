@@ -1,58 +1,60 @@
 {% extends 'base.html' %}
 
-{% block title %}Create Event - Django Calendar{% endblock %}
+{% block title %}Create Event - Serenity Calendar{% endblock %}
 
 {% block content %}
-<div class="row justify-content-center">
-    <div class="col-md-8">
-        <div class="card">
-            <div class="card-header">
-                <h3 class="mb-0">
-                    <i class="fas fa-plus me-2"></i>Create New Event
-                </h3>
-            </div>
-            <div class="card-body">
-                <form method="post">
-                    {% csrf_token %}
-                    <div class="mb-3">
-                        <label for="title" class="form-label">Event Title *</label>
-                        <input type="text" class="form-control" id="title" name="title" required>
-                    </div>
-                    
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label for="start_time" class="form-label">Start Date & Time *</label>
-                                <input type="datetime-local" class="form-control" id="start_time" name="start_time" required>
+<div class="container mt-4 page-content-container">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="mb-0">
+                        <i class="fas fa-calendar-plus me-2"></i>Create New Event
+                    </h3>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label for="title" class="form-label">Event Title *</label>
+                            <input type="text" class="form-control" id="title" name="title" required>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="start_time" class="form-label">Start Date & Time *</label>
+                                    <input type="datetime-local" class="form-control" id="start_time" name="start_time" required>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="end_time" class="form-label">End Date & Time *</label>
+                                    <input type="datetime-local" class="form-control" id="end_time" name="end_time" required>
+                                </div>
                             </div>
                         </div>
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label for="end_time" class="form-label">End Date & Time *</label>
-                                <input type="datetime-local" class="form-control" id="end_time" name="end_time" required>
-                            </div>
+                        
+                        <div class="mb-3">
+                            <label for="location" class="form-label">Location</label>
+                            <input type="text" class="form-control" id="location" name="location" placeholder="Enter event location">
                         </div>
-                    </div>
-                    
-                    <div class="mb-3">
-                        <label for="location" class="form-label">Location</label>
-                        <input type="text" class="form-control" id="location" name="location" placeholder="Enter event location">
-                    </div>
-                    
-                    <div class="mb-3">
-                        <label for="description" class="form-label">Description</label>
-                        <textarea class="form-control" id="description" name="description" rows="4" placeholder="Enter event description"></textarea>
-                    </div>
-                    
-                    <div class="d-flex justify-content-between">
-                        <a href="{% url 'calendar:calendar_view' %}" class="btn btn-secondary">
-                            <i class="fas fa-arrow-left me-2"></i>Cancel
-                        </a>
-                        <button type="submit" class="btn btn-success">
-                            <i class="fas fa-save me-2"></i>Create Event
-                        </button>
-                    </div>
-                </form>
+                        
+                        <div class="mb-3">
+                            <label for="description" class="form-label">Description</label>
+                            <textarea class="form-control" id="description" name="description" rows="4" placeholder="Enter event description"></textarea>
+                        </div>
+                        
+                        <div class="d-flex justify-content-between">
+                            <a href="{% url 'calendar:calendar_view' %}" class="btn btn-secondary">
+                                <i class="fas fa-arrow-left me-2"></i>Cancel
+                            </a>
+                            <button type="submit" class="btn btn-success">
+                                <i class="fas fa-save me-2"></i>Create Event
+                            </button>
+                        </div>
+                    </form>
+                </div>
             </div>
         </div>
     </div>
@@ -61,7 +63,7 @@
 
 {% block scripts %}
 <script>
-// Set minimum date to today
+// Set minimum date to today for date-time inputs
 const now = new Date();
 const year = now.getFullYear();
 const month = String(now.getMonth() + 1).padStart(2, '0');
@@ -70,21 +72,29 @@ const hours = String(now.getHours()).padStart(2, '0');
 const minutes = String(now.getMinutes()).padStart(2, '0');
 
 const minDateTime = `${year}-${month}-${day}T${hours}:${minutes}`;
-document.getElementById('start_time').min = minDateTime;
-document.getElementById('end_time').min = minDateTime;
+const startTimeInput = document.getElementById('start_time');
+const endTimeInput = document.getElementById('end_time');
+
+if (startTimeInput) startTimeInput.min = minDateTime;
+if (endTimeInput) endTimeInput.min = minDateTime;
 
 // Auto-set end time to 1 hour after start time
-document.getElementById('start_time').addEventListener('change', function() {
-    const startTime = new Date(this.value);
-    const endTime = new Date(startTime.getTime() + 60 * 60 * 1000); // Add 1 hour
-    
-    const endYear = endTime.getFullYear();
-    const endMonth = String(endTime.getMonth() + 1).padStart(2, '0');
-    const endDay = String(endTime.getDate()).padStart(2, '0');
-    const endHours = String(endTime.getHours()).padStart(2, '0');
-    const endMinutes = String(endTime.getMinutes()).padStart(2, '0');
-    
-    document.getElementById('end_time').value = `${endYear}-${endMonth}-${endDay}T${endHours}:${endMinutes}`;
-});
+if (startTimeInput && endTimeInput) {
+    startTimeInput.addEventListener('change', function() {
+        if (this.value) {
+            const startTime = new Date(this.value);
+            const endTime = new Date(startTime.getTime() + 60 * 60 * 1000); // Add 1 hour
+            
+            const endYear = endTime.getFullYear();
+            const endMonth = String(endTime.getMonth() + 1).padStart(2, '0');
+            const endDay = String(endTime.getDate()).padStart(2, '0');
+            const endHours = String(endTime.getHours()).padStart(2, '0');
+            const endMinutes = String(endTime.getMinutes()).padStart(2, '0');
+            
+            endTimeInput.value = `${endYear}-${endMonth}-${endDay}T${endHours}:${endMinutes}`;
+            endTimeInput.min = this.value; // End time cannot be before start time
+        }
+    });
+}
 </script>
 {% endblock %}

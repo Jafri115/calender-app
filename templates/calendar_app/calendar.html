@@ -1,198 +1,151 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Daily Shia Spiritual Routine - Task Calendar</title>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
-    <meta name="csrf-token" content="{{ csrf_token }}">
-    <style>
-        :root {
-            --islamic-green: #2d5a3d;
-            --islamic-gold: #c9a961;
-            --event-color: #6c757d;
-            --hour-slot-height-normal: 48px; 
-            --day-header-height: 60px;
-            --time-column-width: 70px;
-        }
-        body { background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%); font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #333; overscroll-behavior-y: contain; }
-        .main-container { background: rgba(255,255,255,0.97); border-radius:18px; box-shadow:0 15px 35px rgba(0,0,0,0.12); margin:15px auto; padding:15px 20px; max-width:1600px; }
-        .header { background: linear-gradient(135deg, var(--islamic-green), var(--islamic-gold)); border-radius:12px; padding:18px; margin-bottom:18px; color:white; text-align:center; box-shadow:0 8px 18px rgba(45,90,61,0.22); }
-        .header h1 { font-size:2rem; font-weight:600; text-shadow:1px 1px 2px rgba(0,0,0,0.2); }
-        .header-nav { margin-top:12px; }
-        .header-nav .btn { margin:0 4px; background-color:rgba(255,255,255,0.9); color:var(--islamic-green); border-color:rgba(255,255,255,0.55); font-size:0.75rem; padding:0.3rem 0.6rem; }
-        .header-nav .btn:hover { background-color:white; color:var(--islamic-green); transform:translateY(-1px); box-shadow:0 2px 4px rgba(0,0,0,0.1); }
-        .header-nav .btn-warning { background-color:var(--islamic-gold); color:white; border-color:var(--islamic-gold); }
-        .header-nav .btn-warning:hover { background-color:#b38e4a; }
-        .summary-section { background:rgba(255,255,255,0.8); border-radius:10px; padding:10px 15px; margin-bottom:18px; box-shadow:0 3px 8px rgba(0,0,0,0.05); }
-        .summary-section h5 { color:var(--islamic-green); font-size:0.9rem; margin-bottom:0.2rem; }
-        .summary-section p { font-size:0.8rem; margin-bottom:0; }
-        #requestNotificationPermission { font-size:0.7rem; padding:0.1rem 0.3rem; }
-        .calendar-container { background:white; border-radius:12px; box-shadow:0 6px 20px rgba(0,0,0,0.07); overflow-x:auto; }
-        .calendar-header { background:linear-gradient(135deg, var(--islamic-green), #4a6741); color:white; padding:10px 18px; display:flex; justify-content:space-between; align-items:center; }
-        .calendar-header h3 { margin-bottom:0; font-size:1.2rem; }
-        .calendar-header .btn-group .btn { font-size:0.75rem; padding:0.3rem 0.7rem; }
-        .week-view { display:grid; grid-template-columns:var(--time-column-width) repeat(7, 1fr); background:white; min-width:750px; }
-        .time-column, .day-column { display:grid; grid-template-rows:var(--day-header-height) repeat(24, var(--hour-slot-height-normal)); }
-        .time-column { background:#f9fcff; border-right:1px solid #dee2e6; }
-        .day-column { position:relative; border-left:1px solid #dee2e6; }
-        .day-column:first-of-type { border-left:none; }
-        .time-header, .day-header { padding:8px; text-align:center; font-weight:700; border-bottom:1px solid #dee2e6; display:flex; align-items:center; justify-content:center; flex-direction:column; height:var(--day-header-height); box-sizing:border-box; }
-        .day-header { background:#f9fcff; color:var(--islamic-green); }
-        .day-header.today { background:linear-gradient(135deg, var(--islamic-gold), #e0aa3e); color:white; box-shadow:inset 0 -2px 5px rgba(0,0,0,0.1); }
-        .day-date { font-size:1rem; }
-        .day-name { font-size:0.75rem; opacity:0.85; }
-        .time-slot { font-size:0.7rem; font-weight:500; color:#555; display:flex; align-items:center; justify-content:center; }
-        .hour-slot { border-bottom:1px dashed #eef2f5; }
-        .time-slot, .hour-slot { box-sizing:border-box; position:relative; }
-        .day-column .hour-slot { border-right:1px solid #eef2f5; }
-        .day-column:last-of-type .hour-slot { border-right:none; }
-        .day-column .hour-slot:last-of-type { border-bottom:none; }
-        .task-item, .event-item { position:absolute; left:3px; right:3px; padding:3px 5px; border-radius:4px; font-size:0.68rem; cursor:pointer; transition:all 0.2s ease, box-shadow 0.2s; box-shadow:0 1px 2px rgba(0,0,0,0.12); overflow:hidden; display:flex; flex-direction:column; justify-content:flex-start; line-height:1.2; z-index:1; border:1px solid transparent; }
-        .task-item:hover, .event-item:hover { box-shadow:0 2px 6px rgba(0,0,0,0.2); z-index:2; border-color:rgba(0,0,0,0.1); }
-        .item-content-wrapper { display:flex; align-items:flex-start; margin-bottom:1px; }
-        .item-icon { margin-right:3px; margin-top:0; font-size:0.9em; flex-shrink:0; }
-        .item-title { text-overflow:ellipsis; overflow:hidden; font-weight:500; display:-webkit-box; -webkit-line-clamp:1; -webkit-box-orient:vertical; }
-        .item-title.multiline { -webkit-line-clamp:2; }
-        .item-time-display { font-size:0.6rem; opacity:0.85; }
-        .item-description-preview { font-size:0.6rem; opacity:0.75; margin-top:2px; line-height:1.1; max-height:2.2em; overflow:hidden; text-overflow:ellipsis; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; }
-        .task-item.completed { opacity:0.6; background-image:repeating-linear-gradient(-45deg,transparent,transparent 3px,rgba(0,0,0,0.05)3px,rgba(0,0,0,0.05)6px); }
-        .task-item.completed .item-title { text-decoration:line-through; }
-        .current-time-line-wrapper { position:absolute; left:var(--time-column-width); right:0; height:2px; z-index:3; pointer-events:none; }
-        .current-time-line { height:100%; background-color:#e74c3c; position:relative; }
-        .current-time-line-indicator { position:absolute; width:7px; height:7px; border-radius:50%; background-color:#e74c3c; left:-3.5px; top:-2.5px; }
-        
-        .modal-dialog { max-width: 750px; margin-top: 2rem; margin-bottom: 2rem;}
-        .modal-content { border-radius:12px; box-shadow:0 10px 30px rgba(0,0,0,0.25); height: 85vh; max-height: 700px; display: flex; flex-direction: column;}
-        .modal-header { background:linear-gradient(135deg, var(--islamic-green), var(--islamic-gold)); color:white; border-radius:12px 12px 0 0; padding:0.75rem 1rem; flex-shrink: 0;}
-        .modal-title { font-size:1.1rem; }
-        .modal-body { padding:1rem 1.25rem; overflow-y: auto; flex-grow: 1;}
-        .modal-footer { padding: 0.75rem 1rem; flex-shrink: 0;}
-        .modal-info-row { display: flex; gap: 1.5rem; margin-bottom: 0.75rem; align-items: center; flex-wrap: wrap;}
-        .modal-info-item { display: flex; align-items: center; gap: 0.4rem;}
-        .modal-info-item strong { font-size: 0.8rem; color: var(--islamic-green);}
-        .modal-info-item span { font-size: 0.8rem;}
-        .description-section { margin-bottom: 1rem;}
-        .description-section h6 { font-size:0.85rem; color:var(--islamic-green); margin-bottom:0.5rem; display: flex; align-items: center; gap: 0.5rem;}
-        #modalItemDescription { background: #f8f9fa; border: 1px solid #e9ecef; border-radius: 8px; padding: 0.75rem; font-size: 0.85rem; line-height: 1.45; max-height: 300px; /* Adjusted for overall modal height */ overflow-y: auto;}
-        #modalItemDescription h1, #modalItemDescription h2, #modalItemDescription h3, #modalItemDescription h4, #modalItemDescription h5, #modalItemDescription h6 {color: var(--islamic-green); margin-top: 0.8rem; margin-bottom: 0.4rem; font-weight: 600;}
-        #modalItemDescription h1 { font-size: 1.25rem; } #modalItemDescription h2 { font-size: 1.1rem; } #modalItemDescription h3 { font-size: 1rem; }
-        #modalItemDescription h4 { font-size: 0.9rem; } #modalItemDescription h5 { font-size: 0.85rem; } #modalItemDescription h6 { font-size: 0.8rem; }
-        #modalItemDescription strong {color: #2c3e50; font-weight: 600;} #modalItemDescription em {color: #5a6c7d; font-style: italic;}
-        #modalItemDescription del {color: #999;text-decoration: line-through;}
-        #modalItemDescription ul, #modalItemDescription ol { margin: 0.5rem 0; padding-left: 1.2rem;} #modalItemDescription li { margin-bottom: 0.2rem;}
-        #modalItemDescription a {color: var(--islamic-green); text-decoration: none; border-bottom: 1px solid transparent; transition: border-color 0.2s;}
-        #modalItemDescription a:hover { border-bottom-color: var(--islamic-green); }
-        #modalItemDescription code { background: #e9ecef; padding: 0.15rem 0.3rem; border-radius: 3px; font-family: 'Courier New', monospace; font-size: 0.8em; color: #e83e8c;}
-        #modalItemDescription pre { background: #f1f3f4; padding: 0.75rem; border-radius: 6px; overflow-x: auto; margin: 0.8rem 0; border-left: 3px solid var(--islamic-green);}
-        #modalItemDescription pre code {background: none; padding: 0; color: #333;}
-        #modalItemDescription blockquote { margin: 0.8rem 0; padding: 0.6rem 1rem; background: #f8f9fa; border-left: 3px solid var(--islamic-gold); font-style: italic; color: #555;}
-        #modalTaskSpecifics { background: #f8f9fa; border-radius: 6px; padding: 0.75rem; margin-top: 0.75rem; }
-        #modalTaskSpecifics .row { margin: 0; align-items: center; }
-        #modalTaskSpecifics .col-md-6 { padding: 0.25rem 0.5rem; display: flex; align-items: center; gap: 0.5rem; }
-        .btn-close-white { filter:invert(1) grayscale(100%) brightness(200%); }
-        .view-full-description-btn { font-size: 0.7rem; padding: 0.15rem 0.4rem; }
-    </style>
-</head>
-<body>
-    <div class="main-container">
-        <div class="header">
-            <h1><i class="fas fa-moon me-3"></i>Daily Shia Spiritual Routine</h1>
-            <p class="mb-0 small">Building Barakah, Taqwa, and Inner Peace with Rizq Focus</p>
-            <div class="header-nav">
-                <a href="{% url 'calendar:create_task' %}" class="btn btn-sm"><i class="fas fa-plus-circle me-1"></i> Add Task</a>
-                <a href="{% url 'calendar:task_statistics' %}" class="btn btn-sm"><i class="fas fa-chart-bar me-1"></i> View Stats</a>
-                <a href="{% url 'calendar:sync_gcal_events' %}" class="btn btn-sm"><i class="fab fa-google me-1"></i> Sync GCal Events</a>
-                {% if not request.user.googlecalendartoken %}
-                <a href="{% url 'calendar:google_auth' %}" class="btn btn-warning btn-sm"><i class="fab fa-google me-1"></i> Connect GCal</a>
-                {% else %}
-                <span class="badge bg-light text-success ms-2 p-2" style="font-size:0.75rem;"><i class="fab fa-google text-success"></i> GCal Linked</span>
-                {% endif %}
-            </div>
-        </div>
-        <div class="summary-section">
-            <div class="row text-center align-items-center">
-                <div class="col-md-4 col-6 mb-2 mb-md-0"><h5><i class="fas fa-calendar-day me-1 text-info"></i>Today</h5><p>{{ todays_tasks_count }} task(s)</p></div>
-                <div class="col-md-4 col-6 mb-2 mb-md-0"><h5><i class="fas fa-calendar-alt me-1 text-warning"></i>Upcoming</h5><p>{{ upcoming_tasks_count }} task(s) next 7d</p></div>
-                <div class="col-md-4 col-12"><h5><i class="fas fa-bell me-1 text-success"></i>Notifications</h5><p><span id="notificationStatus">Checking...</span> <button id="requestNotificationPermission" class="btn btn-sm btn-outline-success ms-1 py-0 px-1" style="display:none;">Enable</button></p></div>
-            </div>
-        </div>
+{% extends 'base.html' %}
 
-        <div class="calendar-container">
-            <div class="calendar-header">
-                <h3><i class="fas fa-calendar-week me-2"></i>Weekly Schedule</h3>
-                <div class="btn-group">
-                    <button id="prev-week" class="btn btn-light btn-sm"><i class="fas fa-chevron-left"></i></button>
-                    <button id="current-week" class="btn btn-light btn-sm">This Week</button>
-                    <button id="next-week" class="btn btn-light btn-sm"><i class="fas fa-chevron-right"></i></button>
-                </div>
-            </div>
-            <div class="week-view" id="calendarGrid">
-                <div class="d-flex justify-content-center align-items-center p-5" style="grid-column: 1 / span 8; min-height: 400px;">
-                    <div class="spinner-border text-success" role="status"><span class="visually-hidden">Loading...</span></div>
-                </div>
-            </div>
-        </div>
+{% block title %}Serenity - Weekly Schedule{% endblock %}
+
+{% block head_extra %}
+<!-- Page-specific styles can go here if any -->
+{% endblock %}
+
+{% block content %}
+<div class="calendar-controls-header">
+  <div class="date-nav-group">
+    <button
+      id="sidebar-prev-week"
+      aria-label="Previous Week"
+      class="btn btn-sm btn-outline-secondary me-2"
+    >
+      <i class="fas fa-chevron-left"></i>
+    </button>
+    <h2 id="currentWeekRangeDisplay">
+      <i class="fas fa-spinner fa-spin"></i> Loading...
+    </h2>
+    <button
+      id="sidebar-next-week"
+      aria-label="Next Week"
+      class="btn btn-sm btn-outline-secondary ms-2"
+    >
+      <i class="fas fa-chevron-right"></i>
+    </button>
+  </div>
+  <div class="actions">
+    <a
+      href="{% url 'calendar:create_task' %}"
+      class="btn btn-sm new-practice-btn"
+      ><i class="fas fa-plus"></i> New Task</a
+    >
+  </div>
+</div>
+<div class="calendar-container">
+  <div class="week-view" id="calendarGrid">
+    <div
+      class="d-flex justify-content-center align-items-center p-5"
+      style="grid-column: 1 / span 8; min-height: 400px"
+    >
+      <div
+        class="spinner-border text-primary"
+        role="status"
+        style="width: 2.5rem; height: 2.5rem"
+      >
+        <span class="visually-hidden">Loading...</span>
+      </div>
     </div>
+  </div>
+</div>
 
-    <!-- Item Detail Modal -->
-    <div class="modal fade" id="itemModal" tabindex="-1">
-        <div class="modal-dialog modal-lg">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="modalItemTitleWrapper">
-                        <i id="modalItemIcon" class="me-2"></i>
-                        <span id="modalItemTitle">Details</span>
-                    </h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <div class="modal-info-row">
-                        <div class="modal-info-item">
-                            <strong><i class="fas fa-clock text-primary"></i> Time:</strong>
-                            <span id="modalItemTime">--</span>
-                        </div>
-                        <div class="modal-info-item">
-                            <strong><i class="fas fa-exclamation-circle text-warning"></i> Priority:</strong>
-                            <span id="modalItemPriorityBadge" class="badge">--</span>
-                        </div>
-                    </div>
-                    <div class="description-section">
-                        <div class="d-flex justify-content-between align-items-center mb-2">
-                             <h6><i class="fas fa-info-circle text-info"></i>Description:</h6>
-                            <a href="#" id="viewFullDescriptionBtn" class="btn btn-outline-secondary btn-sm view-full-description-btn" target="_blank" style="display: none;">
-                                <i class="fas fa-external-link-alt me-1"></i> View Full
-                            </a>
-                        </div>
-                        <div id="modalItemDescription">Description will appear here...</div>
-                    </div>
-                    <div id="modalTaskSpecifics" style="display:none;">
-                        <div class="row">
-                            <div class="col-md-6">
-                                <strong><i class="fas fa-palette"></i> Color:</strong>
-                                <span id="modalTaskColorPreview" style="display:inline-block;width:18px;height:18px;border-radius:3px;vertical-align:middle;margin-right:5px;border:1px solid #ccc;"></span>
-                                <span id="modalTaskColor">--</span>
-                            </div>
-                            <div class="col-md-6" id="modalTaskCompletionSection">
-                                <strong><i class="fas fa-check-square text-success"></i> Status:</strong>
-                                <span id="modalTaskStatusText" class="fw-bold">Pending</span>
-                                <button id="modalMarkCompleteBtn" class="btn btn-sm ms-2" data-task-id="" data-occurrence-date="">Mark...</button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="modal-footer justify-content-between">
-                    <a href="#" id="edit-item-btn" class="btn btn-primary btn-sm">
-                        <i class="fas fa-edit me-1"></i>Edit
-                    </a>
-                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Close</button>
-                </div>
-            </div>
+<!-- Item Details Modal -->
+<div class="modal fade" id="itemModal" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title fs-5" id="modalItemTitleWrapper">
+          <i id="modalItemIcon" class="me-2"></i
+          ><span id="modalItemTitle">Details</span>
+        </h5>
+        <button
+          type="button"
+          class="btn-close btn-close-white"
+          data-bs-dismiss="modal"
+        ></button>
+      </div>
+      <div class="modal-body">
+        <div class="modal-info-row">
+          <div class="modal-info-item">
+            <strong><i class="fas fa-clock text-primary"></i> Time:</strong>
+            <span id="modalItemTime">--</span>
+          </div>
+          <div class="modal-info-item">
+            <span id="modalItemPriorityBadge" class="badge">--</span>
+          </div>
         </div>
+        <div class="description-section">
+          <div
+            class="d-flex justify-content-between align-items-center mb-2"
+          >
+            <h6>Description:</h6>
+            <a
+              href="#"
+              id="viewFullDescriptionBtn"
+              class="btn btn-outline-secondary btn-sm view-full-description-btn"
+              target="_blank"
+              style="display: none" 
+              ><i class="fas fa-external-link-alt me-1"></i> View Full</a
+            >
+          </div>
+          <div id="modalItemDescription">Desc...</div>
+        </div>
+        <div id="modalTaskSpecifics" style="display: none">
+          <div class="row">
+            <div class="col-md-6">
+              <strong><i class="fas fa-palette"></i> Color:</strong>
+              <span
+                id="modalTaskColorPreview"
+                style="
+                  display: inline-block;
+                  width: 18px;
+                  height: 18px;
+                  border-radius: 3px;
+                  vertical-align: middle;
+                  margin-right: 5px;
+                  border: 1px solid #ccc;
+                "
+              ></span
+              ><span id="modalTaskColor">--</span>
+            </div>
+            <div class="col-md-6" id="modalTaskCompletionSection">
+              <strong
+                ><i class="fas fa-check-square text-success"></i>
+                Status:</strong
+              >
+              <span id="modalTaskStatusText" class="fw-bold">Pending</span
+              ><button
+                id="modalMarkCompleteBtn"
+                class="btn btn-sm ms-2"
+                data-task-id=""
+                data-occurrence-date=""
+              >
+                Mark...
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer justify-content-between">
+        <a href="#" id="edit-item-btn" class="btn btn-primary btn-sm"
+          ><i class="fas fa-edit me-1"></i>Edit</a
+        ><button
+          type="button"
+          class="btn btn-secondary btn-sm"
+          data-bs-dismiss="modal"
+        >
+          Close
+        </button>
+      </div>
     </div>
+  </div>
+</div>
+{% endblock %}
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+{% block scripts %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const calendarGrid = document.getElementById('calendarGrid');
@@ -200,108 +153,165 @@ document.addEventListener('DOMContentLoaded', function() {
     const itemModal = new bootstrap.Modal(itemModalElement);
     const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
     
-    let currentWeekStartDate = null;
+    let currentWeekStartDate = null; // Monday of the VIEWED week
     let activeCalendarItems = [];
-    let notificationsEnabled = false;
 
     const slotHeightNormalPx = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--hour-slot-height-normal'));
     const dayHeaderHeightPx = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--day-header-height'));
     const pixelsPerMinute = slotHeightNormalPx / 60;
 
-    const notificationStatusEl = document.getElementById('notificationStatus');
-    const requestNotificationPermissionBtn = document.getElementById('requestNotificationPermission');
+    const sidebarCurrentDayEl = document.getElementById('sidebarCurrentDay');
+    const sidebarCurrentMonthYearEl = document.getElementById('sidebarCurrentMonthYear');
+    const currentWeekRangeDisplayEl = document.getElementById('currentWeekRangeDisplay');
+    const sidebarCompletedCountEl = document.getElementById('sidebarCompletedCount');
+    const sidebarTotalCountEl = document.getElementById('sidebarTotalCount');
+    const sidebarProgressEl = document.getElementById('sidebarProgress');
 
-    function updateNotificationStatusDisplay() { 
-        if (!('Notification' in window)) { 
-            notificationStatusEl.textContent = "Not Supported"; 
-            if(requestNotificationPermissionBtn) requestNotificationPermissionBtn.style.display = 'none'; 
-            return; 
-        } 
-        if (Notification.permission === "granted") { 
-            notificationStatusEl.textContent = "Enabled"; 
-            notificationsEnabled = true; 
-            if(requestNotificationPermissionBtn) requestNotificationPermissionBtn.style.display = 'none'; 
-        } else if (Notification.permission === "denied") { 
-            notificationStatusEl.textContent = "Denied"; 
-            notificationsEnabled = false; 
-            if(requestNotificationPermissionBtn) requestNotificationPermissionBtn.style.display = 'none'; 
-        } else { 
-            notificationStatusEl.textContent = "Disabled"; 
-            if(requestNotificationPermissionBtn) requestNotificationPermissionBtn.style.display = 'inline-block'; 
-            notificationsEnabled = false; 
-        } 
+    function getLocalDateString(date) {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    }
+
+    function updateSidebarDateTime() {
+        const today = new Date(); 
+        today.setHours(0, 0, 0, 0); 
+
+        let displayDateForSidebar;
+
+        if (currentWeekStartDate) {
+            const viewedMonday = new Date(currentWeekStartDate); // Make a copy
+            viewedMonday.setHours(0, 0, 0, 0);
+
+            const viewedSunday = new Date(viewedMonday);
+            viewedSunday.setDate(viewedMonday.getDate() + 6); 
+            viewedSunday.setHours(23, 59, 59, 999); 
+
+            if (today >= viewedMonday && today <= viewedSunday) {
+                displayDateForSidebar = today;
+            } else {
+                displayDateForSidebar = viewedMonday;
+            }
+        } else {
+            displayDateForSidebar = today; 
+        }
+        
+        if (sidebarCurrentDayEl && displayDateForSidebar) {
+            sidebarCurrentDayEl.textContent = displayDateForSidebar.getDate();
+        }
+        if (sidebarCurrentMonthYearEl && displayDateForSidebar) {
+            sidebarCurrentMonthYearEl.textContent = displayDateForSidebar.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+        }
     }
     
-    if(requestNotificationPermissionBtn) {
-        requestNotificationPermissionBtn.addEventListener('click', () => { 
-            Notification.requestPermission().then(permission => { 
-                updateNotificationStatusDisplay(); 
-                if (permission === "granted") new Notification("Notifications Enabled!", { body: "You will now receive reminders." }); 
-            }); 
-        });
-    }
-    updateNotificationStatusDisplay();
-
-    function scheduleNotification(task) { 
-        if (!notificationsEnabled || task.completed || !task.start_time || !('Notification' in window) || Notification.permission !== "granted") return; 
-        const now = new Date(); 
-        const startTime = new Date(task.start_time); 
-        if (startTime > now) { 
-            const notifiedKey = `notified_${task.id}_${task.occurrence_date}`; 
-            if (localStorage.getItem(notifiedKey)) return; 
-            if (startTime.getTime() - now.getTime() <= 5 * 60 * 1000 && startTime.getTime() - now.getTime() > -1 * 60 * 1000 ) { 
-                new Notification(task.title, { body: `Starts at ${String(startTime.getHours()).padStart(2,'0')}:${String(startTime.getMinutes()).padStart(2,'0')}. ${(task.description || '').substring(0,50)}...` }); 
-                localStorage.setItem(notifiedKey, 'true'); 
-            } 
-        } 
-    }
-    setInterval(() => { 
-        if(notificationsEnabled) {
-            activeCalendarItems.filter(item => item.type === 'task').forEach(scheduleNotification); 
+    function updateHeaderWeekRange(mondayDate) {
+        if (!currentWeekRangeDisplayEl || !mondayDate) return;
+        const sundayDate = new Date(mondayDate);
+        sundayDate.setDate(mondayDate.getDate() + 6);
+        const options = { month: 'long', day: 'numeric' };
+        const yearOption = { year: 'numeric' };
+        let endYearStr = '';
+        if (sundayDate.getFullYear() !== mondayDate.getFullYear()) {
+            endYearStr = `, ${sundayDate.toLocaleDateString('en-US', yearOption)}`;
+        } else if (sundayDate.getMonth() === mondayDate.getMonth()){
+            currentWeekRangeDisplayEl.textContent = `${mondayDate.toLocaleDateString('en-US', {month: 'long'})} ${mondayDate.getDate()} - ${sundayDate.getDate()}, ${sundayDate.getFullYear()}`;
+            return;
         }
-    }, 30 * 1000);
+        currentWeekRangeDisplayEl.textContent = `${mondayDate.toLocaleDateString('en-US', options)} - ${sundayDate.toLocaleDateString('en-US', options)}${endYearStr || ', ' + sundayDate.toLocaleDateString('en-US', yearOption)}`;
+    }
 
-    async function fetchAndRenderCalendar(startDateParam = '') {
-        calendarGrid.innerHTML = `<div class="d-flex justify-content-center align-items-center p-5" style="grid-column: 1 / span 8; min-height: 400px;"><div class="spinner-border text-success" role="status"><span class="visually-hidden">Loading...</span></div></div>`;
+    function updateSidebarPracticeSummary(items) {
+        if (!sidebarCompletedCountEl && !sidebarTotalCountEl && !sidebarProgressEl) return;
+        let completedThisWeek = 0;
+        let totalTasksThisWeek = 0;
+        items.forEach(item => {
+            if (item.type === 'task') {
+                totalTasksThisWeek++;
+                if (item.completed) completedThisWeek++;
+            }
+        });
+        if(sidebarCompletedCountEl) sidebarCompletedCountEl.textContent = completedThisWeek;
+        if(sidebarTotalCountEl) sidebarTotalCountEl.textContent = totalTasksThisWeek;
+        if(sidebarProgressEl) {
+            const progressPercent = totalTasksThisWeek > 0 ? (completedThisWeek / totalTasksThisWeek) * 100 : 0;
+            sidebarProgressEl.style.width = `${progressPercent}%`;
+            sidebarProgressEl.setAttribute('aria-valuenow', progressPercent);
+        }
+    }
+
+    async function fetchAndRenderCalendar(startDateParam) {
+        // console.log(`[FETCH] Requesting data for: ${startDateParam}`);
+        if(currentWeekRangeDisplayEl) currentWeekRangeDisplayEl.innerHTML = `<i class="fas fa-spinner fa-spin me-1"></i> Loading...`;
+        calendarGrid.innerHTML = `<div class="d-flex justify-content-center align-items-center p-5" style="grid-column: 1 / span 8; min-height: 400px;"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div></div>`;
+        
         try { 
-            const response = await fetch(`/calendar/api/week-data/?${startDateParam}`); 
-            if (!response.ok) throw new Error(`Network: ${response.statusText} (${response.status})`); 
-            const data = await response.json(); 
-            if (data.error) throw new Error(data.error); 
+            const cleanDateParam = startDateParam.startsWith('?') ? startDateParam.substring(1) : startDateParam;
+            const response = await fetch(`/calendar/api/week-data/?${cleanDateParam}`);
+            
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
+            const data = await response.json();
+            // console.log('[FETCH] Received data:', data);
             
             const [year, month, day] = data.start_date.split('-').map(Number);
-            currentWeekStartDate = new Date(year, month - 1, day);
+            currentWeekStartDate = new Date(year, month - 1, day); 
+
+            activeCalendarItems = data.items || [];
+            if (isNaN(currentWeekStartDate.getTime())) {
+                console.error(`Received invalid start_date: ${data.start_date}. Defaulting to today's week.`);
+                currentWeekStartDate = getMonday(new Date()); 
+            }
+                                    
+            updateHeaderWeekRange(currentWeekStartDate);
+            updateSidebarDateTime(); 
+            updateSidebarPracticeSummary(activeCalendarItems);
+            renderGrid(currentWeekStartDate, activeCalendarItems);
             
-            activeCalendarItems = data.items; 
-            renderGrid(currentWeekStartDate, data.items); 
-            activeCalendarItems.filter(item => item.type === 'task').forEach(scheduleNotification);
         } catch (error) { 
-            calendarGrid.innerHTML = `<div class="alert alert-danger m-3" style="grid-column: 1 / span 8;">Failed to load calendar: ${error.message}</div>`; 
-            console.error("Fetch or Render error in fetchAndRenderCalendar:", error); 
+            console.error('[FETCH] Error loading calendar data:', error);
+            calendarGrid.innerHTML = `
+                <div class="d-flex justify-content-center align-items-center p-5" style="grid-column: 1 / span 8; min-height: 400px;">
+                    <div class="text-center">
+                        <i class="fas fa-exclamation-triangle text-warning mb-3" style="font-size: 2rem;"></i>
+                        <p class="text-muted">Failed to load calendar data</p>
+                        <button class="btn btn-sm btn-outline-primary" onclick="location.reload()">
+                            <i class="fas fa-redo me-1"></i> Retry
+                        </button>
+                    </div>
+                </div>
+            `;
+            if(currentWeekRangeDisplayEl) currentWeekRangeDisplayEl.textContent = 'Error loading week';
         }
     }
-
+    
     function renderGrid(mondayDateObj, items) {
         calendarGrid.innerHTML = '';
         const dayNames = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]; 
 
         const timeColumn = document.createElement('div'); timeColumn.className = 'time-column';
-        const timeHeader = document.createElement('div'); timeHeader.className = 'time-header'; timeHeader.innerHTML = '<i class="fas fa-clock"></i>';
-        timeColumn.appendChild(timeHeader);
-        for (let h = 0; h < 24; h++) { const tsDiv = document.createElement('div'); tsDiv.className = 'time-slot'; tsDiv.textContent = String(h).padStart(2,'0')+':00'; timeColumn.appendChild(tsDiv); }
+        timeColumn.appendChild(document.createElement('div')).className = 'time-header';
+        for (let h = 0; h < 24; h++) { const tsDiv = document.createElement('div'); tsDiv.className = 'time-slot'; tsDiv.textContent = String(h).padStart(2,'0'); timeColumn.appendChild(tsDiv); }
         calendarGrid.appendChild(timeColumn);
 
         for (let i = 0; i < 7; i++) {
             const dayDate = new Date(mondayDateObj.getFullYear(), mondayDateObj.getMonth(), mondayDateObj.getDate() + i);
-            const dayColumn = document.createElement('div'); dayColumn.className = 'day-column'; dayColumn.dataset.date = dayDate.toISOString().split('T')[0];
+            const dayColumn = document.createElement('div'); dayColumn.className = 'day-column';
+            dayColumn.dataset.date = getLocalDateString(dayDate);
             const dHdr = document.createElement('div'); dHdr.className = 'day-header'; 
-            const today = new Date(); 
-            if (dayDate.getFullYear() === today.getFullYear() && dayDate.getMonth() === today.getMonth() && dayDate.getDate() === today.getDate()) { dHdr.classList.add('today'); }
-            dHdr.innerHTML = `<div class="day-date">${dayDate.getDate()}</div><div class="day-name">${dayNames[i]}</div>`;
+            const todayForGridHighlight = new Date(); 
+            if (dayDate.toDateString() === todayForGridHighlight.toDateString()) dHdr.classList.add('today');
+            dHdr.innerHTML = `<div class="day-name">${dayNames[i]}</div><div class="day-date">${dayDate.getDate()}</div>`;
             dayColumn.appendChild(dHdr);
             for (let h = 0; h < 24; h++) {
                 const hrSlt = document.createElement('div'); hrSlt.className = 'hour-slot'; hrSlt.dataset.hour = h;
-                hrSlt.addEventListener('click', (e) => { if(e.target !== hrSlt) return; const dStr = dayColumn.dataset.date; const tStr = String(h).padStart(2,'0')+':00'; window.location.href = `{% url 'calendar:create_task' %}?datetime=${dStr}T${tStr}`; });
+                const createTaskUrlBase = "{% url 'calendar:create_task' %}";
+                hrSlt.addEventListener('click', (e) => { 
+                    if(e.target !== hrSlt) return; 
+                    window.location.href = `${createTaskUrlBase}?datetime=${dayColumn.dataset.date}T${String(h).padStart(2,'0')}:00`; 
+                });
                 dayColumn.appendChild(hrSlt);
             }
             calendarGrid.appendChild(dayColumn);
@@ -309,117 +319,267 @@ document.addEventListener('DOMContentLoaded', function() {
 
         items.forEach(item => {
             const startTime = new Date(item.start_time);
-            const dateStr = startTime.toISOString().split('T')[0];
+            const dateStr = getLocalDateString(startTime);
             const parentDayColumn = document.querySelector(`.day-column[data-date="${dateStr}"]`);
             if (!parentDayColumn) return;
 
             const itemEl = document.createElement('div');
             itemEl.className = item.type === 'task' ? 'task-item' : 'event-item';
-            itemEl.style.backgroundColor = item.color || 'var(--event-color)';
-            function getContrastYIQ(hex){ if (!hex || typeof hex !== 'string') return 'black'; if(hex.startsWith('var(--')) return '#333'; hex = hex.replace("#", ""); if (hex.length === 3) hex = hex.split('').map(c=>c+c).join(''); if (hex.length !== 6) return 'black'; var r=parseInt(hex.substr(0,2),16),g=parseInt(hex.substr(2,4),16),b=parseInt(hex.substr(4,6),16); if(isNaN(r)||isNaN(g)||isNaN(b))return 'black'; var yiq=((r*299)+(g*587)+(b*114))/1000; return(yiq>=135)?'black':'white';}
-            itemEl.style.color = getContrastYIQ(itemEl.style.backgroundColor);
-
+            const itemColorForDot = item.color || 'var(--text-muted-color)';
+            itemEl.style.backgroundColor = `${itemColorForDot}20`; 
+            itemEl.style.borderLeft = `3px solid ${itemColorForDot}`;
+            
             const minutesFromDayStart = startTime.getHours() * 60 + startTime.getMinutes();
             itemEl.style.top = `${minutesFromDayStart * pixelsPerMinute + dayHeaderHeightPx}px`;
 
-            let durationMinutes = (item.type === 'task' ? 30 : 60);
-            if (item.end_time) { const endTime = new Date(item.end_time); if (endTime > startTime) durationMinutes = Math.max(15, (endTime.getTime() - startTime.getTime()) / (1000 * 60)); else durationMinutes = 15; }
-            const itemCalculatedHeight = durationMinutes * pixelsPerMinute;
-            itemEl.style.height = `${Math.max(itemCalculatedHeight - 1, 18)}px`;
-
-            let iconClass = item.type === 'task' ? (item.completed ? 'fas fa-check-circle' : 'far fa-circle') : 'fas fa-calendar-alt';
-            let itemTimeStr = `${String(startTime.getHours()).padStart(2,'0')}:${String(startTime.getMinutes()).padStart(2,'0')}`;
-            if (item.end_time) itemTimeStr += ` - ${String(new Date(item.end_time).getHours()).padStart(2,'0')}:${String(new Date(item.end_time).getMinutes()).padStart(2,'0')}`;
-            
-            let descriptionPreviewHtml = '';
-            if (item.description && itemCalculatedHeight > 32) { // Show preview if item is tall enough
-                let plainTextDesc = item.description.replace(/\r\n|\r|\n/g, ' ').replace(/\*\*([^*]+)\*\*/g, '$1').replace(/__([^_]+)__/g, '$1').replace(/\*([^*]+)\*/g, '$1').replace(/_([^_]+)_/g, '$1').replace(/\[(.*?)\]\(.*?\)/g, '$1').replace(/`([^`]+)`/g, '$1').replace(/^#+\s*/gm, '').replace(/^>\s*/gm, '').replace(/^-\s*/gm, '').replace(/<[^>]*>/g, '');
-                descriptionPreviewHtml = `<div class="item-description-preview">${plainTextDesc.substring(0, 35)}${plainTextDesc.length > 35 ? '…' : ''}</div>`;
+            let durationMinutes = 30; 
+            if (item.end_time) { 
+                const endTime = new Date(item.end_time); 
+                if (endTime > startTime) {
+                    durationMinutes = Math.max(15, (endTime.getTime() - startTime.getTime()) / 60000); 
+                }
             }
-            itemEl.innerHTML = `<div class="item-content-wrapper"><i class="item-icon ${iconClass}"></i><span class="item-title ${itemCalculatedHeight > 28 ? 'multiline' : ''}">${item.title}</span></div><div class="item-time-display">${itemTimeStr}</div>${descriptionPreviewHtml}`;
-            if (item.type === 'task' && item.completed) itemEl.classList.add('completed');
-            itemEl.dataset.itemId = item.id; if(item.type === 'task') itemEl.dataset.occurrenceDate = item.occurrence_date;
-            itemEl.dataset.itemType = item.type;
-            itemEl.addEventListener('click', (e) => { e.stopPropagation(); showItemDetails(item); });
+            itemEl.style.height = `${Math.max(durationMinutes * pixelsPerMinute - 2, 20)}px`;
+
+            let itemTimeStr = startTime.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+            if (item.end_time) {
+                itemTimeStr += ` - ${new Date(item.end_time).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}`;
+            }
+            
+            const occurrenceDateForDataset = item.occurrence_date ? item.occurrence_date.toString() : dateStr;
+            const checkboxId = `item-checkbox-${item.id}-${occurrenceDateForDataset}`;
+            const isChecked = item.type === 'task' && item.completed;
+
+            itemEl.innerHTML = `
+                <div class="item-type-dot" style="background-color: ${itemColorForDot};"></div>
+                <div class="item-details-group">
+                    <span class="item-title">${item.title}</span>
+                    <span class="item-time-display">${itemTimeStr}</span>
+                </div>
+                <input type="checkbox" id="${checkboxId}" class="item-checkbox-placeholder" 
+                    ${isChecked ? 'checked' : ''} 
+                    data-item-id="${item.id}" 
+                    data-occurrence-date="${occurrenceDateForDataset}" 
+                    ${item.type !== 'task' ? 'disabled style="display:none;"' : ''}>
+            `;
+            if(isChecked) itemEl.classList.add('completed');
+            
+            if(item.type === 'task'){
+                const checkbox = itemEl.querySelector(`#${checkboxId}`);
+                checkbox.addEventListener('click', (e) => {
+                    e.stopPropagation(); 
+                    handleTaskCompletionToggle(checkbox.dataset.itemId, checkbox.dataset.occurrenceDate, checkbox.checked);
+                });
+            }
+            
+            itemEl.addEventListener('click', (e) => { 
+                if(e.target.type === 'checkbox') return; 
+                showItemDetails(item); 
+            });
             parentDayColumn.appendChild(itemEl);
         });
         updateCurrentTimeLine();
     }
     
+    function showItemDetails(item) {
+        document.getElementById('modalItemIcon').className = item.type === 'task' ? 'fas fa-tasks me-2' : 'fas fa-calendar-check me-2';
+        document.getElementById('modalItemTitle').textContent = item.title;
+        const startTime = new Date(item.start_time); 
+        let timeString = startTime.toLocaleTimeString('en-US', { weekday:'short', month:'short', day:'numeric', hour: 'numeric', minute: '2-digit' });
+        if (item.end_time) { 
+            const endTime = new Date(item.end_time); 
+            timeString += ` - ${endTime.toLocaleTimeString('en-US', {hour: 'numeric', minute: '2-digit'})}`; 
+        }
+        document.getElementById('modalItemTime').textContent = timeString;
+        
+        const pBadge = document.getElementById('modalItemPriorityBadge'); 
+        if(item.priority){ 
+            pBadge.textContent = item.priority; 
+            let bCls='bg-secondary'; 
+            if (item.priority.toLowerCase()==='high')bCls='bg-danger'; 
+            else if(item.priority.toLowerCase()==='medium')bCls='bg-warning text-dark'; 
+            else if(item.priority.toLowerCase()==='low')bCls='bg-success'; 
+            pBadge.className=`badge ${bCls}`; 
+            pBadge.style.display = 'inline-block';
+        } else { 
+            pBadge.style.display = 'none';
+        }
+        
+        document.getElementById('modalItemDescription').innerHTML = item.description ? simpleMarkdownToHtml(item.description) : '<p class="text-muted fst-italic">No description provided.</p>';
+        
+        const tSpec=document.getElementById('modalTaskSpecifics');
+        const tComp=document.getElementById('modalTaskCompletionSection');
+        const eBtn=document.getElementById('edit-item-btn');
+        const viewFullBtn = document.getElementById('viewFullDescriptionBtn');
+
+        if(item.type==='task'){ 
+            tSpec.style.display='block'; 
+            document.getElementById('modalTaskColorPreview').style.backgroundColor=item.color||'#ccc'; 
+            document.getElementById('modalTaskColor').textContent=item.color?item.color.toUpperCase():'Default'; 
+            tComp.style.display='flex'; 
+            const mBtn=document.getElementById('modalMarkCompleteBtn');
+            const sTxt=document.getElementById('modalTaskStatusText'); 
+            sTxt.textContent=item.completed?"Completed":"Pending"; 
+            mBtn.textContent=item.completed?"Mark Pending":"Mark Complete"; 
+            mBtn.className=item.completed?"btn btn-sm btn-outline-warning ms-2":"btn btn-sm btn-outline-success ms-2"; 
+            mBtn.dataset.taskId=item.id; 
+            mBtn.dataset.occurrenceDate=item.occurrence_date; 
+            eBtn.style.display='inline-block'; 
+            eBtn.href=`/calendar/task/${item.id}/edit/`; 
+            viewFullBtn.href = `/calendar/task/${item.id}/description/`;
+            viewFullBtn.style.display = 'inline-block';
+        } else if (item.type === 'event') { 
+            tSpec.style.display='none'; 
+            tComp.style.display='none'; 
+            eBtn.style.display='none'; 
+            viewFullBtn.href = `/calendar/event/${item.id}/description/`;
+            viewFullBtn.style.display = 'inline-block';
+        } else {
+            tSpec.style.display='none';
+            tComp.style.display='none';
+            eBtn.style.display='none';
+            viewFullBtn.style.display = 'none';
+        }
+        itemModal.show();
+    }
+    
+    async function handleTaskCompletionToggle(taskId, occurrenceDate, isCompleted) {
+        // console.log(`Updating task ${taskId} for date ${occurrenceDate} to status: ${isCompleted}`);
+        try {
+            const response = await fetch(`/calendar/task/${taskId}/complete/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken
+                },
+                body: JSON.stringify({
+                    date: occurrenceDate, 
+                    completed: isCompleted 
+                })
+            });
+            const result = await response.json();
+            if (response.ok && result.success) {
+                // console.log("Update successful:", result);
+                const itemIndex = activeCalendarItems.findIndex(i => 
+                    String(i.id) === String(taskId) && 
+                    i.type === 'task' && 
+                    i.occurrence_date === occurrenceDate
+                );
+                if (itemIndex > -1) {
+                    activeCalendarItems[itemIndex].completed = (result.status === 'completed');
+                }
+                renderGrid(currentWeekStartDate, activeCalendarItems); 
+                updateSidebarPracticeSummary(activeCalendarItems); 
+            } else {
+                throw new Error(result.error || "Unknown error occurred during update.");
+            }
+        } catch (err) {
+            console.error("Mark complete error:", err);
+            alert("An error occurred while updating the task status.");
+            renderGrid(currentWeekStartDate, activeCalendarItems);
+        }
+    }
+    
+    document.getElementById('modalMarkCompleteBtn').addEventListener('click', function() {
+        const isCurrentlyCompleted = this.textContent === "Mark Pending"; 
+        handleTaskCompletionToggle(this.dataset.taskId, this.dataset.occurrenceDate, !isCurrentlyCompleted); 
+        itemModal.hide();
+    });
+
     function simpleMarkdownToHtml(md) {
         if (!md || md.trim() === "") return '<p class="text-muted fst-italic">No description provided.</p>';
-        let html = md;
-        // 1. Basic HTML Entity Escaping
-        html = html.replace(/&/g, "&amp;")
-           .replace(/</g, "&lt;")
-           .replace(/>/g, "&gt;")
-           .replace(/"/g, "&quot;")
-           .replace(/'/g, "&#39;");
-        // Process block elements first
-        // Code blocks (```[\s\S]*?```)
-        html = html.replace(/```(\w*)\n([\s\S]*?)\n```/g, function(match, lang, code) { return '<pre><code class="language-' + (lang || '') + '">' + code.trim() + '</code></pre>';});
-        html = html.replace(/```([\s\S]*?)```/g, '<pre><code>$1</code></pre>'); // Fallback for no lang
-        // Blockquotes
-        html = html.replace(/^> (.*$)/gim, '<blockquote>$1</blockquote>');
-        // Horizontal rules
-        html = html.replace(/^---+$/gm, '<hr>').replace(/^\*\*\*+$/gm, '<hr>').replace(/^___+$/gm, '<hr>');
-        // Headings
-        html = html.replace(/^### (.*$)/gim, '<h6>$1</h6>').replace(/^## (.*$)/gim, '<h5>$1</h5>').replace(/^# (.*$)/gim, '<h4>$1</h4>');
-        // Unordered lists
-        html = html.replace(/^(\s*[-*+]\s+.+(\n|$))+/gim, function(match) { const items = match.trim().split('\n').map(line => `<li>${line.replace(/^\s*[-*+]\s+/, '').trim()}</li>`).join(''); return `<ul>${items}</ul>`; });
-        // Ordered lists
-        html = html.replace(/^(\s*\d+\.\s+.+(\n|$))+/gim, function(match) { const items = match.trim().split('\n').map(line => `<li>${line.replace(/^\s*\d+\.\s+/, '').trim()}</li>`).join(''); return `<ol>${items}</ol>`; });
-        // Process inline elements last
-        html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/__([^_]+)__/g, '<strong>$1</strong>'); // Bold
-        html = html.replace(/\*(.*?)\*/g, '<em>$1</em>').replace(/(^|\W)_([^_]+)_(\W|$)/g, '$1<em>$2</em>$3'); // Italic
-        html = html.replace(/~~(.*?)~~/g, '<del>$1</del>'); // Strikethrough
-        html = html.replace(/`([^`]+)`/g, '<code>$1</code>'); // Inline code
-        html = html.replace(/\[([^\[]+)\]\((.*?)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>'); // Links
-        // Paragraphs and line breaks (simplified)
-        html = html.split(/\n\s*\n/).map(paragraph => paragraph.trim() ? `<p>${paragraph.replace(/\n/g, '<br>')}</p>` : '').join('');
-        html = html.replace(/<br>\s*<(ul|ol|li|h[1-6]|blockquote|pre|hr)/gi, '<$1'); // Clean up <br> before block elements
-        html = html.replace(/<\/(ul|ol|li|h[1-6]|blockquote|pre)><br>/gi, '</$1>');  // Clean up <br> after block elements
+        let html = md
+            .replace(/&/g, "&")
+            .replace(/</g, "<")
+            .replace(/>/g, ">");
+        html = html.replace(/^# (.*$)/gim, '<h4>$1</h4>')
+                   .replace(/^## (.*$)/gim, '<h5>$1</h5>')
+                   .replace(/^### (.*$)/gim, '<h6>$1</h6>');
+        html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                   .replace(/\*(.*?)\*/g, '<em>$1</em>');
+        html = html.replace(/^\s*[-*+]\s+(.*)/gim, '<ul><li>$1</li></ul>')
+                   .replace(/<\/ul>\n?<ul>/g, ''); 
+        html = html.replace(/\n/g, '<br>');
         return html;
     }
 
-    function showItemDetails(item) { 
-        document.getElementById('modalItemIcon').className = item.type === 'task' ? 'fas fa-tasks me-2' : 'fas fa-calendar-check me-2';
-        document.getElementById('modalItemTitle').textContent = item.title;
-        const startTime = new Date(item.start_time); const options = { weekday:'short', month:'short', day:'numeric', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }; let timeString = startTime.toLocaleTimeString('en-GB', options).replace(',', '');
-        if (item.end_time) { const endTime = new Date(item.end_time); timeString += ` - ${endTime.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })}`; const dMs = endTime.getTime() - startTime.getTime(); const dH = Math.floor(dMs/(36e5)); const dM = Math.floor((dMs%(36e5))/(6e4)); if(dH>0||dM>0) timeString+=` (${dH>0?dH+'h ':''}${dM}m)`;} else if (item.type === 'task') timeString+=` (approx. 30 min)`;
-        document.getElementById('modalItemTime').textContent = timeString;
-        const pBadge = document.getElementById('modalItemPriorityBadge'); if(item.priority){ pBadge.textContent = item.priority; let bCls='bg-secondary'; if (item.priority.toLowerCase()==='high')bCls='bg-danger'; else if(item.priority.toLowerCase()==='medium')bCls='bg-warning text-dark'; else if(item.priority.toLowerCase()==='low')bCls='bg-success'; pBadge.className=`badge ${bCls}`; } else { pBadge.textContent = 'N/A'; pBadge.className='badge bg-light text-dark';}
+    function updateCurrentTimeLine() { 
+        document.querySelectorAll('.current-time-line-wrapper').forEach(l => l.remove()); 
+        const now = new Date(); 
+        const todayStr = getLocalDateString(now);
+        const todayColumn = document.querySelector(`.day-column[data-date="${todayStr}"]`);
+        if (!todayColumn) return; 
         
-        document.getElementById('modalItemDescription').innerHTML = simpleMarkdownToHtml(item.description);
+        const minutesFromDayStart = now.getHours() * 60 + now.getMinutes(); 
+        const topPosition = minutesFromDayStart * pixelsPerMinute + dayHeaderHeightPx; 
+        const lineWrapper = document.createElement('div'); 
+        lineWrapper.className = 'current-time-line-wrapper'; 
+        lineWrapper.style.top = `${topPosition}px`;
         
-        const viewFullDescBtn = document.getElementById('viewFullDescriptionBtn');
-        if (item.description && item.description.trim().length > 0) {
-            if (item.type === 'task') viewFullDescBtn.href = `/calendar/task/${item.id}/description/`;
-            else if (item.type === 'event') viewFullDescBtn.href = `/calendar/event/${item.id}/description/`;
-            viewFullDescBtn.style.display = (item.type === 'task' || item.type === 'event') ? 'inline-block' : 'none';
-        } else { viewFullDescBtn.style.display = 'none'; }
+        const timeColumnWidth = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--time-column-width'));
+        const dayColumnIndex = Array.from(calendarGrid.querySelectorAll('.day-column')).indexOf(todayColumn);
+        const dayColumnWidth = todayColumn.offsetWidth; 
 
-        const tSpec=document.getElementById('modalTaskSpecifics'), tComp=document.getElementById('modalTaskCompletionSection'), eBtn=document.getElementById('edit-item-btn');
-        if(item.type==='task'){ tSpec.style.display='block'; document.getElementById('modalTaskColorPreview').style.backgroundColor=item.color||'var(--event-color)'; document.getElementById('modalTaskColor').textContent=item.color?item.color.toUpperCase():'Default'; tComp.style.display='block'; const mBtn=document.getElementById('modalMarkCompleteBtn'), sTxt=document.getElementById('modalTaskStatusText'); sTxt.textContent=item.completed?"Completed":"Pending"; mBtn.textContent=item.completed?"Mark Pending":"Mark Complete"; mBtn.className=item.completed?"btn btn-sm btn-outline-warning ms-2":"btn btn-sm btn-outline-success ms-2"; mBtn.dataset.taskId=item.id; mBtn.dataset.occurrenceDate=item.occurrence_date; eBtn.style.display='inline-block'; eBtn.href=`/calendar/task/${item.id}/edit/`; } else { tSpec.style.display='none'; tComp.style.display='none'; eBtn.style.display='none'; }
-        itemModal.show();
+        if (dayColumnIndex !== -1) {
+            lineWrapper.style.left = `${timeColumnWidth + (dayColumnIndex * dayColumnWidth)}px`; 
+            lineWrapper.style.width = `${dayColumnWidth}px`; 
+            lineWrapper.innerHTML = '<div class="current-time-line-indicator"></div><div class="current-time-line"></div>';
+            calendarGrid.appendChild(lineWrapper); 
+        }
     }
+    setInterval(updateCurrentTimeLine, 60000); 
 
-    document.getElementById('modalMarkCompleteBtn').addEventListener('click', async function() { 
-        const taskId=this.dataset.taskId, occDate=this.dataset.occurrenceDate; try { const resp=await fetch(`/calendar/task/${taskId}/complete/`,{method:'POST',headers:{'Content-Type':'application/json','X-CSRFToken':csrfToken},body:JSON.stringify({date:occDate})}); const res=await resp.json(); if(resp.ok&&res.success){ itemModal.hide(); const idx=activeCalendarItems.findIndex(i=>i.id==taskId&&i.type==='task'&&i.occurrence_date==occDate); if(idx>-1)activeCalendarItems[idx].completed=(res.status==='completed'); renderGrid(currentWeekStartDate, activeCalendarItems); } else { alert("Error: "+(res.error||"Unknown error."));}} catch(err){console.error("Mark complete error:",err); alert("An error occurred.");}
+    function getMonday(d) { 
+        d = new Date(d); 
+        var day = d.getDay(), diff = d.getDate() - day + (day === 0 ? -6 : 1); 
+        d.setDate(diff); 
+        d.setHours(0,0,0,0); 
+        return d; 
+    }
+    
+    document.getElementById('sidebar-prev-week').addEventListener('click', (e) => { 
+        e.preventDefault(); 
+        if(!currentWeekStartDate) return; 
+        const newDate = new Date(currentWeekStartDate); 
+        newDate.setDate(newDate.getDate() - 7); 
+        const newStartDateParam = `date=${getLocalDateString(newDate)}`;
+        fetchAndRenderCalendar(newStartDateParam); 
     });
 
-    function updateCurrentTimeLine() { 
-        document.querySelectorAll('.current-time-line-wrapper').forEach(l=>l.remove()); const now=new Date(); const calendarGridElement = document.getElementById('calendarGrid'); const timeCol = document.querySelector('.time-column'); if(calendarGridElement && timeCol){ const minutesFromDayStart = now.getHours() * 60 + now.getMinutes(); const topPosition = minutesFromDayStart * pixelsPerMinute + dayHeaderHeightPx; const lineWrapper = document.createElement('div'); lineWrapper.className = 'current-time-line-wrapper'; lineWrapper.style.top = `${topPosition}px`; const line = document.createElement('div'); line.className = 'current-time-line'; const indicator = document.createElement('div'); indicator.className = 'current-time-line-indicator'; lineWrapper.appendChild(indicator); lineWrapper.appendChild(line); calendarGridElement.appendChild(lineWrapper); }
-    }
-    setInterval(updateCurrentTimeLine, 30000);
+    document.getElementById('sidebar-next-week').addEventListener('click', (e) => { 
+        e.preventDefault(); 
+        if(!currentWeekStartDate) return; 
+        const newDate = new Date(currentWeekStartDate); 
+        newDate.setDate(newDate.getDate() + 7); 
+        const newStartDateParam = `date=${getLocalDateString(newDate)}`;
+        fetchAndRenderCalendar(newStartDateParam); 
+    });    
+    
+    // Initial Load
+    const urlParams = new URLSearchParams(window.location.search);
+    const dateParam = urlParams.get('date');
+    
+    let dateForGridCalculation; 
 
-    function getMonday(d) {d=new Date(d);var day=d.getDay(),diff=d.getDate()-day+(day==0?-6:1);d.setDate(diff); d.setHours(0,0,0,0); return d;}
-    function getStartDateParam(d){return`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`}
-    document.getElementById('prev-week').addEventListener('click',(e)=>{e.preventDefault();if(!currentWeekStartDate)return;const nD=new Date(currentWeekStartDate);nD.setDate(nD.getDate()-7);nD.setHours(0,0,0,0);fetchAndRenderCalendar(getStartDateParam(nD))});
-    document.getElementById('next-week').addEventListener('click',(e)=>{e.preventDefault();if(!currentWeekStartDate)return;const nD=new Date(currentWeekStartDate);nD.setDate(nD.getDate()+7);nD.setHours(0,0,0,0);fetchAndRenderCalendar(getStartDateParam(nD))});
-    document.getElementById('current-week').addEventListener('click',(e)=>{e.preventDefault();const m=getMonday(new Date());fetchAndRenderCalendar(getStartDateParam(m))});
-    const uP=new URLSearchParams(window.location.search),sDP=uP.get('start_date'); let iDL; if(sDP){const[y,m,d]=sDP.split('-').map(Number);iDL=getMonday(new Date(y,m-1,d));}else{iDL=getMonday(new Date())} iDL.setHours(0,0,0,0);fetchAndRenderCalendar(getStartDateParam(iDL));
+    if (dateParam) {
+        const parts = dateParam.split('-');
+        if (parts.length === 3) {
+            dateForGridCalculation = new Date(parts[0], parts[1] - 1, parts[2]);
+        } else {
+            dateForGridCalculation = new Date(); 
+        }
+    } else {
+        dateForGridCalculation = new Date(); 
+    }
+    if (isNaN(dateForGridCalculation.getTime())) dateForGridCalculation = new Date(); 
+
+    const initialMondayForGrid = getMonday(dateForGridCalculation);
+    
+    currentWeekStartDate = initialMondayForGrid; 
+    updateSidebarDateTime(); 
+
+    const initialStartDateParam = `date=${getLocalDateString(initialMondayForGrid)}`;
+    fetchAndRenderCalendar(initialStartDateParam); 
 });
 </script>
-</body>
-</html>
+{% endblock %}

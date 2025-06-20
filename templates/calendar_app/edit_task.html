@@ -1,13 +1,13 @@
 {% extends 'base.html' %}
 
-{% block title %}Edit Task - Django Calendar{% endblock %}
+{% block title %}Edit Task - {{ task.title }}{% endblock %}
 
 {% block content %}
-<div class="container mt-4">
+<div class="container mt-4 page-content-container">
     <div class="row justify-content-center">
         <div class="col-md-8">
             <div class="card shadow-sm">
-                <div class="card-header bg-primary text-white">
+                <div class="card-header">
                     <h3 class="mb-0"><i class="fas fa-edit me-2"></i>Edit Task</h3>
                 </div>
                 <div class="card-body">
@@ -85,23 +85,28 @@
                         
                         <div class="d-flex justify-content-between mt-4">
                             <div>
-                                <a href="{% url 'calendar:calendar_view' %}" class="btn btn-outline-secondary">Cancel</a>
-                                <button type="button" class="btn btn-danger ms-2" data-bs-toggle="modal" data-bs-target="#deleteConfirmModal">Delete</button>
+                                <a href="{% url 'calendar:calendar_view' %}" class="btn btn-outline-secondary">
+                                  <i class="fas fa-times me-1"></i>Cancel
+                                </a>
+                                <button type="button" class="btn btn-danger ms-2" data-bs-toggle="modal" data-bs-target="#deleteConfirmModal">
+                                  <i class="fas fa-trash-alt me-1"></i>Delete
+                                </button>
                             </div>
                             <button type="submit" class="btn btn-success"><i class="fas fa-save me-2"></i>Update Task</button>
                         </div>
                     </form>
-                    <hr>
+                    <hr class="my-4">
 
-                    <div class="mt-4">
-                        <h5><i class="fab fa-google me-2"></i>Google Calendar Sync</h5>
-                        <p class="small text-muted">
+                    <div class="mt-3 p-3 border rounded bg-light">
+                        <h5><i class="fab fa-google me-2 text-primary"></i>Google Calendar Sync</h5>
+                        <p class="small text-muted mb-2">
                             Sync occurrences of this task for the next 30 days to your primary Google Calendar.
+                            Events created by this sync will have a marker: <code>[Synced Task ID: {{task.id}}, Date: YYYY-MM-DD]</code> in their description.
                         </p>
                         <form method="post" action="{% url 'calendar:sync_task_to_google' task.id %}">
                             {% csrf_token %}
-                            <button type="submit" class="btn btn-outline-primary">
-                                <i class="fas fa-sync-alt me-2"></i>Sync Next 30 Days
+                            <button type="submit" class="btn btn-outline-primary btn-sm">
+                                <i class="fas fa-sync-alt me-2"></i>Sync Next 30 Days to Google Calendar
                             </button>
                         </form>
                     </div>
@@ -111,13 +116,26 @@
     </div>
 </div>
 
-<!-- Delete Confirmation Modal (Same as before) -->
+<!-- Delete Confirmation Modal -->
 <div class="modal fade" id="deleteConfirmModal" tabindex="-1" aria-labelledby="deleteConfirmModalLabel" aria-hidden="true">
-  <div class="modal-dialog"> <div class="modal-content">
-    <div class="modal-header"><h5 class="modal-title"id="deleteConfirmModalLabel">Confirm Deletion</h5><button type="button"class="btn-close"data-bs-dismiss="modal"aria-label="Close"></button></div>
-    <div class="modal-body">Are you sure you want to delete the task "{{ task.title }}"? This cannot be undone.</div>
-    <div class="modal-footer"><button type="button"class="btn btn-secondary"data-bs-dismiss="modal">Cancel</button><form method="post"action="{% url 'calendar:delete_task' task.id %}"style="display:inline;">{% csrf_token %}<button type="submit"class="btn btn-danger">Delete Task</button></form></div>
-  </div></div>
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="deleteConfirmModalLabel"><i class="fas fa-exclamation-triangle text-danger me-2"></i>Confirm Deletion</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        Are you sure you want to delete the task "<strong>{{ task.title }}</strong>"? This action cannot be undone.
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <form method="post" action="{% url 'calendar:delete_task' task.id %}" style="display:inline;">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-danger">Yes, Delete Task</button>
+        </form>
+      </div>
+    </div>
+  </div>
 </div>
 {% endblock %}
 
@@ -128,7 +146,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const recurringOptionsDiv = document.getElementById('recurring-options');
     const weekdayWrapper = document.getElementById('weekday-wrapper');
 
-    function toggleRecurringFields() { /* ... Same as create_task.html ... */
+    function toggleRecurringFields() {
         const freq = frequencySelect.value;
         if (freq === 'daily' || freq === 'weekly') {
             recurringOptionsDiv.style.display = 'block';
@@ -141,25 +159,25 @@ document.addEventListener('DOMContentLoaded', function() {
                 weekdayWrapper.style.display = 'none';
                 document.getElementById('weekday').required = false;
                 document.getElementById('weekday').disabled = true;
-                // document.getElementById('weekday').value = ''; // Don't clear on edit if switching from weekly
             }
-        } else {
+        } else { // 'once'
             recurringOptionsDiv.style.display = 'none';
             weekdayWrapper.style.display = 'none';
             document.getElementById('weekday').required = false;
             document.getElementById('weekday').disabled = true;
             document.getElementById('recurring_end_date').disabled = true;
-            // document.getElementById('recurring_end_date').value = ''; // Don't clear on edit
-            // document.getElementById('weekday').value = ''; // Don't clear on edit
         }
     }
     frequencySelect.addEventListener('change', toggleRecurringFields);
-    toggleRecurringFields();
+    toggleRecurringFields(); // Initial call
 
     // --- Add Color Palette --- (Same as create_task.html)
     const colorInput = document.getElementById('color');
     const colorPaletteContainer = document.getElementById('color-palette');
-    const pastelColors = ['#AEC6CF', '#C8E6C9', '#FFD8B1', '#F8BBD0', '#D1C4E9', '#FFF9C4', '#B2DFDB', '#FFCCBC', '#CFD8DC'];
+    const pastelColors = [
+      '#72B6CF', '#66D18A', '#FFA960', '#F06292', '#9575CD', 
+      '#FFF176', '#4DB6AC', '#FF8A65', '#90A4AE'
+    ];
 
     pastelColors.forEach(color => {
         const colorButton = document.createElement('button');
@@ -170,6 +188,7 @@ document.addEventListener('DOMContentLoaded', function() {
         colorButton.style.borderRadius = '50%';
         colorButton.style.border = '1px solid #ccc';
         colorButton.style.marginRight = '5px';
+        colorButton.style.marginBottom = '5px';
         colorButton.style.cursor = 'pointer';
         colorButton.title = color;
         colorButton.addEventListener('click', function() {
